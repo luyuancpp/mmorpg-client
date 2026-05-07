@@ -15,9 +15,20 @@ namespace MmorpgClient.UI
     ///
     /// Auto-creates a camera + directional light if the scene has none, so
     /// you can drop this on a fresh empty GameObject and press Play.
+    ///
+    /// When no scene file contains a GameDemo GameObject this method
+    /// auto-spawns one so pressing Play on any empty scene works out of
+    /// the box.
     /// </summary>
     public sealed class GameDemo : MonoBehaviour
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoSpawn()
+        {
+            if (FindObjectOfType<GameDemo>() != null) return;
+            new GameObject("[GameDemo]").AddComponent<GameDemo>();
+        }
+
         [Header("Server")]
         public string GatewayBaseUrl = "http://127.0.0.1:8080";
         public uint   ZoneId         = 1;
