@@ -34,11 +34,23 @@ namespace MmorpgClient.UI
         public uint  SkillTableId = 1001;
         public ulong TargetEntity = 0;
 
+        [Header("Reconnect")]
+        public bool  AutoReconnect       = true;
+        public float ReconnectMinDelay   = 2f;
+        public float ReconnectMaxDelay   = 30f;
+        public int   ReconnectMaxAttempts = 10;
+
         private GameClient _client;
         private readonly List<string> _log = new();
         private string _status = "idle";
         private Vector2 _scroll;
         private Camera _camera;
+
+        // reconnect state
+        private bool  _wasInGame;
+        private int   _reconnectAttempt;
+        private float _nextReconnectAt;
+        private bool  _reconnecting;
 
         private void Awake()
         {
@@ -46,12 +58,24 @@ namespace MmorpgClient.UI
 
             _client = new GameClient(GatewayBaseUrl);
             _client.OnLog += Append;
-            _client.OnDisconnected += () => { _status = "disconnected"; Append("[gate] disconnected"); };
+            _client.OnDisconnected += () =>
+            {
+                _status = "disconnected";
+                Append("[gate] disconnected");
+                if (AutoReconnect && _wasInGame)
+                {
+                    _reconnectAttempt = 0;
+                    _nextReconnectAt = Time.realtimeSinceStartup + ReconnectMinDelay;
+                }
+            };
         }
 
         private void Update()
         {
             _client.Tick();
+            if (_client.InGame) _wasInGame = true;
+            MaybeReconnect();
+
             if (_camera != null && _client.World != null && _client.World.LocalEntity != 0
                 && _client.World.TryGetActor(_client.World.LocalEntity, out var me))
             {
@@ -61,6 +85,47 @@ namespace MmorpgClient.UI
                 _camera.transform.position = Vector3.Lerp(_camera.transform.position, desired, 0.1f);
                 _camera.transform.LookAt(t.position + Vector3.up);
             }
+        }
+
+        private void MaybeReconnect()
+        {
+            if (!AutoReconnect || _reconnecting || _client.InGame) return;
+            if (_nextReconnectAt == 0f || Time.realtimeSinceStartup < _nextReconnectAt) return;
+            if (_reconnectAttempt >= ReconnectMaxAttempts)
+            {
+                Append($"[reconnect] gave up after {_reconnectAttempt} attempts");
+                _nextReconnectAt = 0f;
+                return;
+            }
+            _reconnectAttempt++;
+            _reconnecting = true;
+            _status = $"reconnecting #{_reconnectAttempt}";
+            Append($"[reconnect] attempt {_reconnectAttempt}");
+            // Rebuild GameClient: a stale GateTcpClient cannot be reused after
+            // its reader/writer threads have exited.
+            _client.Disconnect();
+            _client = new GameClient(GatewayBaseUrl);
+            _client.OnLog += Append;
+            _client.OnDisconnected += () =>
+            {
+                _status = "disconnected";
+                Append("[gate] disconnected");
+                if (AutoReconnect && _wasInGame)
+                {
+                    _nextReconnectAt = Time.realtimeSinceStartup + NextBackoff();
+                }
+            };
+            StartCoroutine(_client.LoginAndEnterGame(ZoneId, Account, Password,
+                () => { _status = "in game"; _reconnectAttempt = 0; _nextReconnectAt = 0f; _reconnecting = false; },
+                e  => { _status = "reconnect FAILED"; Append("[reconnect] err " + e);
+                        _reconnecting = false;
+                        _nextReconnectAt = Time.realtimeSinceStartup + NextBackoff(); }));
+        }
+
+        private float NextBackoff()
+        {
+            float d = ReconnectMinDelay * Mathf.Pow(2f, Mathf.Min(_reconnectAttempt, 6));
+            return Mathf.Min(d, ReconnectMaxDelay);
         }
 
         private void OnGUI()
