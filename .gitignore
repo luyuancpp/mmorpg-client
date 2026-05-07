@@ -19,14 +19,15 @@
 *.blend1
 *.blend1.meta
 
-# Generated protobuf C# (run tools/gen_proto.ps1 to regenerate locally)
-/[Aa]ssets/Scripts/Proto/Generated/*.cs
-!/[Aa]ssets/Scripts/Proto/Generated/.gitkeep
-/[Aa]ssets/Scripts/Proto/Generated/*.cs.meta
+# Note: Generated/*.cs IS committed -- it's deterministic output of
+# tools/gen_proto.ps1 against the parent repo's pinned proto/ tree.
+# Re-run that script after .proto changes and commit the result.
 
-# Vendored Google.Protobuf binary (drop your own copy into Assets/Plugins/)
-/[Aa]ssets/Plugins/Google.Protobuf.dll
-/[Aa]ssets/Plugins/Google.Protobuf.dll.meta
+# .pdb/.xml from Google.Protobuf are noise
+/[Aa]ssets/Plugins/Google.Protobuf.pdb
+/[Aa]ssets/Plugins/Google.Protobuf.pdb.meta
+/[Aa]ssets/Plugins/Google.Protobuf.xml
+/[Aa]ssets/Plugins/Google.Protobuf.xml.meta
 
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data

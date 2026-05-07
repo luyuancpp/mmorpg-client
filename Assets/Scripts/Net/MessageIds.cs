@@ -10,7 +10,12 @@ namespace MmorpgClient.Net
         public const uint CreatePlayer  = 14; // ClientPlayerLogin.CreatePlayer
         public const uint EnterGame     = 26; // ClientPlayerLogin.EnterGame
         public const uint LeaveGame     = 17; // ClientPlayerLogin.LeaveGame
-        public const uint RefreshToken  = 99; // (placeholder; check message_id.txt)
+        // RefreshToken is not in the static message_id.txt snapshot embedded
+        // in this client; the server allocates the ID dynamically via
+        // build.bat. The runtime registry lives in the parent repo and a
+        // future drop will surface it through a generated constants file --
+        // for now the refresh ticker is gated behind a non-zero check.
+        public const uint RefreshToken = 0;
 
         // ── scene C2S ────────────────────────────────────────────
         public const uint EnterScene    = 63; // SceneSceneClientPlayer.EnterScene
