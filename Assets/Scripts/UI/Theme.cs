@@ -43,7 +43,6 @@ namespace MmorpgClient.UI
             var t = new GTextField();
             t.text = text;
             t.textFormat = new TextFormat { color = Accent, size = 28, bold = true, align = AlignType.Left };
-            t.ApplyFormat();
             t.autoSize = AutoSizeType.Both;
             return t;
         }
@@ -53,7 +52,6 @@ namespace MmorpgClient.UI
             var t = new GTextField();
             t.text = text;
             t.textFormat = new TextFormat { color = TextPrim, size = 18, bold = true, align = AlignType.Left };
-            t.ApplyFormat();
             t.autoSize = AutoSizeType.Both;
             return t;
         }
@@ -68,7 +66,6 @@ namespace MmorpgClient.UI
                 size  = 13,
                 align = AlignType.Left,
             };
-            t.ApplyFormat();
             t.autoSize = AutoSizeType.Both;
             t.singleLine = false;
             return t;
@@ -93,7 +90,6 @@ namespace MmorpgClient.UI
                 color = textCol, size = 14, bold = true,
                 align = AlignType.Center,
             };
-            label.ApplyFormat();
             label.verticalAlign = VertAlignType.Middle;
             btn.AddChild(label);
 
@@ -116,25 +112,23 @@ namespace MmorpgClient.UI
             row.SetSize(rowW, 28);
 
             var l = new GTextField();
-            l.SetPosition(0, 4);
+            l.SetXY(0, 4);
             l.SetSize(110, 24);
             l.text = label;
             l.textFormat = new TextFormat { color = TextDim, size = 13, align = AlignType.Left };
-            l.ApplyFormat();
             row.AddChild(l);
 
             var bg = new GGraph();
-            bg.SetPosition(112, 0);
+            bg.SetXY(112, 0);
             bg.DrawRect(rowW - 112, 28, 1, new Color(1, 1, 1, 0.18f), new Color(1, 1, 1, 0.06f));
             row.AddChild(bg);
 
             var input = new GTextInput();
-            input.SetPosition(120, 2);
+            input.SetXY(120, 2);
             input.SetSize(rowW - 132, 24);
             input.text = value;
             input.displayAsPassword = isPassword;
             input.textFormat = new TextFormat { color = TextPrim, size = 14, align = AlignType.Left };
-            input.ApplyFormat();
             row.AddChild(input);
 
             return (row, input);

@@ -68,11 +68,11 @@ namespace MmorpgClient.UI.Screens
             _previewLabel.SetXY(x + 110, y + 36);
             _previewLabel.SetSize(CW - x - 130, 24);
             _previewLabel.textFormat = new TextFormat { color = Theme.TextPrim, size = 16 };
-            _previewLabel.ApplyFormat();
             _card.AddChild(_previewLabel);
             y += 110;
 
-            (var nickRow, _nickField) = Theme.LabeledInput("角色名", _app.Session.RoleNickname, CW - x * 2);
+            var (nickRow, nickField) = Theme.LabeledInput("角色名", _app.Session.RoleNickname, CW - x * 2);
+            _nickField = nickField;
             nickRow.SetXY(x, y); _card.AddChild(nickRow); y += 40;
 
             _enterBtn = Theme.PrimaryButton("登录并进入", OnEnterPressed, 150);

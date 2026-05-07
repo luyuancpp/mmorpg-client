@@ -34,7 +34,6 @@ namespace MmorpgClient.UI.Screens
             _topbarLabel.SetXY(12, 8);
             _topbarLabel.SetSize(root.width - 120, 24);
             _topbarLabel.textFormat = new TextFormat { color = Theme.TextPrim, size = 14, align = AlignType.Left };
-            _topbarLabel.ApplyFormat();
             _topbarLabel.AddRelation(root, RelationType.Width);
             top.AddChild(_topbarLabel);
 
@@ -56,7 +55,6 @@ namespace MmorpgClient.UI.Screens
             _logText.SetSize(344, 148);
             _logText.singleLine = false;
             _logText.textFormat = new TextFormat { color = Theme.TextDim, size = 11, align = AlignType.Left };
-            _logText.ApplyFormat();
             _logPanel.AddChild(_logText);
             root.AddChild(_logPanel);
 

@@ -57,11 +57,14 @@ namespace MmorpgClient.UI.Screens
             _card.AddChild(h3);
             y += 28;
 
-            (var gwRow, _gatewayField)  = Theme.LabeledInput("Gateway",  app.Session.GatewayBaseUrl, CW - x * 2);
+            var (gwRow, gwField)  = Theme.LabeledInput("Gateway",  app.Session.GatewayBaseUrl, CW - x * 2);
+            _gatewayField = gwField;
             gwRow.SetXY(x, y); _card.AddChild(gwRow); y += 34;
-            (var acRow, _accountField)  = Theme.LabeledInput("Account",  app.Session.Account,        CW - x * 2);
+            var (acRow, acField)  = Theme.LabeledInput("Account",  app.Session.Account,        CW - x * 2);
+            _accountField = acField;
             acRow.SetXY(x, y); _card.AddChild(acRow); y += 34;
-            (var pwRow, _passwordField) = Theme.LabeledInput("Password", app.Session.Password,       CW - x * 2, isPassword: true);
+            var (pwRow, pwField) = Theme.LabeledInput("Password", app.Session.Password,       CW - x * 2, isPassword: true);
+            _passwordField = pwField;
             pwRow.SetXY(x, y); _card.AddChild(pwRow); y += 40;
 
             var btnEnter   = Theme.PrimaryButton("进入选服", OnEnterServerSelect, 130);
@@ -133,7 +136,6 @@ namespace MmorpgClient.UI.Screens
                 var head = new GTextField();
                 head.text = $"[{a.type}] {a.title}";
                 head.textFormat = new TextFormat { color = Theme.Accent, size = 14, bold = true };
-                head.ApplyFormat();
                 head.autoSize = AutoSizeType.Both;
                 head.SetXY(4, y);
                 _announceList.AddChild(head);

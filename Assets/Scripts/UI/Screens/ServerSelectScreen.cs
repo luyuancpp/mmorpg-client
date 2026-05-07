@@ -1,6 +1,7 @@
 using System.Collections;
 using FairyGUI;
 using MmorpgClient.Net;
+using UnityEngine;
 
 namespace MmorpgClient.UI.Screens
 {
@@ -113,7 +114,6 @@ namespace MmorpgClient.UI.Screens
                 name.SetSize(w - 200, 24);
                 name.text = $"#{z.zone_id}  {z.name}";
                 name.textFormat = new TextFormat { color = Theme.TextPrim, size = 16, bold = true, align = AlignType.Left };
-                name.ApplyFormat();
                 row.AddChild(name);
 
                 var status = new GTextField();
@@ -121,7 +121,6 @@ namespace MmorpgClient.UI.Screens
                 status.SetSize(w - 200, 20);
                 status.text = StatusText(z);
                 status.textFormat = new TextFormat { color = StatusColor(z), size = 12 };
-                status.ApplyFormat();
                 row.AddChild(status);
 
                 if (z.recommended)
@@ -135,8 +134,7 @@ namespace MmorpgClient.UI.Screens
                     var bt = new GTextField();
                     bt.SetSize(48, 22);
                     bt.text = "推荐";
-                    bt.textFormat = new TextFormat { color = UnityEngine.Color.black, size = 12, bold = true, align = AlignType.Center };
-                    bt.ApplyFormat();
+                    bt.textFormat = new TextFormat { color = Color.black, size = 12, bold = true, align = AlignType.Center };
                     bt.verticalAlign = VertAlignType.Middle;
                     badge.AddChild(bt);
                     row.AddChild(badge);
