@@ -19,6 +19,15 @@
 *.blend1
 *.blend1.meta
 
+# Generated protobuf C# (run tools/gen_proto.ps1 to regenerate locally)
+/[Aa]ssets/Scripts/Proto/Generated/*.cs
+!/[Aa]ssets/Scripts/Proto/Generated/.gitkeep
+/[Aa]ssets/Scripts/Proto/Generated/*.cs.meta
+
+# Vendored Google.Protobuf binary (drop your own copy into Assets/Plugins/)
+/[Aa]ssets/Plugins/Google.Protobuf.dll
+/[Aa]ssets/Plugins/Google.Protobuf.dll.meta
+
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 /[Mm]emoryCaptures/
