@@ -89,6 +89,21 @@ namespace MmorpgClient.UI
         private Vector2 _announceScroll;
         private string _announceError;
         private bool _loadingAnnouncements;
+        private bool _showAnnouncementPopup;
+        private int _popupAnnouncementIndex;
+
+        private readonly string[] _roleArchetypes = { "游侠", "灵符师", "剑客" };
+        private readonly string[] _roleWeapons = { "青锋短剑", "玉简灵符", "古意长剑" };
+        private readonly Color[] _roleColors =
+        {
+            new Color(0.36f, 0.74f, 0.67f),
+            new Color(0.63f, 0.56f, 0.82f),
+            new Color(0.78f, 0.48f, 0.34f),
+        };
+        private int _selectedRoleIndex;
+        private string _roleNameDraft = "云行客";
+        private float _sceneFadeAlpha = 1f;
+        private bool _fadingIntoWorld;
 
         // lightweight 3D preview avatar for login pages
         private GameObject _previewRoot;
@@ -104,6 +119,7 @@ namespace MmorpgClient.UI
         private GUIStyle _zoneButton;
         private GUIStyle _zoneButtonActive;
         private GUIStyle _logStyle;
+        private GUIStyle _popupTitle;
         private Texture2D _bgGradient;
         private Texture2D _mistTex;
         private Texture2D _panelTex;
@@ -112,6 +128,7 @@ namespace MmorpgClient.UI
         private Texture2D _zoneTex;
         private Texture2D _zoneActiveTex;
         private Texture2D _badgeTex;
+        private Texture2D _fadeTex;
 
         // movement client state
         private bool    _moveActive;
@@ -129,6 +146,7 @@ namespace MmorpgClient.UI
             EnsureSceneRig();
             EnsureGuiStyles();
             EnsurePreviewActor();
+            ApplyPreviewRoleVisual();
 
             _accountDraft = Account;
             _passwordDraft = Password;
@@ -163,6 +181,15 @@ namespace MmorpgClient.UI
             if (_previewRoot != null)
             {
                 _previewRoot.SetActive(_stage != LoginStage.InWorld);
+            }
+            if (_fadingIntoWorld)
+            {
+                _sceneFadeAlpha = Mathf.MoveTowards(_sceneFadeAlpha, 0f, Time.deltaTime * 0.8f);
+                if (_sceneFadeAlpha <= 0.001f)
+                {
+                    _sceneFadeAlpha = 0f;
+                    _fadingIntoWorld = false;
+                }
             }
 
             _client.Tick();
@@ -341,6 +368,11 @@ namespace MmorpgClient.UI
             }
 
             _announcements.AddRange(result.items);
+            if (_announcements.Count > 0)
+            {
+                _showAnnouncementPopup = true;
+                _popupAnnouncementIndex = 0;
+            }
         }
 
         private IEnumerator LoginAndEnterJourney()
@@ -389,6 +421,8 @@ namespace MmorpgClient.UI
             }
 
             _stage = LoginStage.InWorld;
+            _sceneFadeAlpha = 1f;
+            _fadingIntoWorld = true;
 
             _isLoggingIn = false;
         }
@@ -405,6 +439,7 @@ namespace MmorpgClient.UI
             _zoneTex = BuildSolidTex(new Color(0.12f, 0.14f, 0.18f, 0.88f));
             _zoneActiveTex = BuildSolidTex(new Color(0.22f, 0.36f, 0.30f, 0.96f));
             _badgeTex = BuildSolidTex(new Color(0.76f, 0.62f, 0.31f, 0.95f));
+            _fadeTex = BuildSolidTex(Color.black);
 
             _rootLabel = new GUIStyle(GUI.skin.label)
             {
@@ -471,6 +506,12 @@ namespace MmorpgClient.UI
                 wordWrap = true,
                 normal = { textColor = new Color(0.77f, 0.81f, 0.78f, 1f) }
             };
+
+            _popupTitle = new GUIStyle(_title)
+            {
+                fontSize = 20,
+                alignment = TextAnchor.MiddleCenter
+            };
         }
 
         private void EnsurePreviewActor()
@@ -503,6 +544,16 @@ namespace MmorpgClient.UI
             {
                 br.material = new Material(Shader.Find("Standard"));
                 br.material.color = new Color(0.82f, 0.88f, 0.92f);
+            }
+        }
+
+        private void ApplyPreviewRoleVisual()
+        {
+            if (_previewAvatar == null) return;
+            var rd = _previewAvatar.GetComponent<Renderer>();
+            if (rd != null && rd.material != null)
+            {
+                rd.material.color = _roleColors[Mathf.Clamp(_selectedRoleIndex, 0, _roleColors.Length - 1)];
             }
         }
 
@@ -599,6 +650,25 @@ namespace MmorpgClient.UI
             return $"{name} (#{z.zone_id})  |  {ZoneStatusText(z)}{extra}";
         }
 
+        private string SelectedZoneHint()
+        {
+            if (_zones.Count == 0 || _selectedZoneIndex < 0 || _selectedZoneIndex >= _zones.Count)
+            {
+                return "请先从网关拉取区服列表。";
+            }
+
+            var z = _zones[_selectedZoneIndex];
+            if (string.Equals(z.status, "MAINTENANCE", StringComparison.OrdinalIgnoreCase))
+            {
+                return string.IsNullOrWhiteSpace(z.maintenance_msg) ? "该区服维护中，请稍后再试。" : z.maintenance_msg;
+            }
+            if (string.Equals(z.status, "PREVIEW", StringComparison.OrdinalIgnoreCase) && z.open_time > 0)
+            {
+                return $"预计开放时间: {ToClock(z.open_time)}";
+            }
+            return $"当前负载: {FriendlyLoad(z.load_level)}";
+        }
+
         private void DrawBackground()
         {
             var screen = new Rect(0, 0, Screen.width, Screen.height);
@@ -607,6 +677,42 @@ namespace MmorpgClient.UI
             float mistOffset = Mathf.Repeat(Time.realtimeSinceStartup * 14f, 64f);
             GUI.DrawTexture(new Rect(-mistOffset, 0, Screen.width + 64f, Screen.height), _mistTex, ScaleMode.StretchToFill);
             GUI.DrawTexture(new Rect(-mistOffset * 0.6f + 80f, 0, Screen.width + 64f, Screen.height), _mistTex, ScaleMode.StretchToFill);
+        }
+
+        private void DrawAnnouncementPopup()
+        {
+            if (!_showAnnouncementPopup || _announcements.Count == 0) return;
+
+            var item = _announcements[Mathf.Clamp(_popupAnnouncementIndex, 0, _announcements.Count - 1)];
+            var backdrop = new Color(0f, 0f, 0f, 0.45f);
+            GUI.color = backdrop;
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), _fadeTex);
+            GUI.color = Color.white;
+
+            var rect = new Rect(Screen.width * 0.5f - 210f, Screen.height * 0.5f - 140f, 420f, 280f);
+            GUILayout.BeginArea(rect, _panel);
+            GUILayout.Label(item.title, _popupTitle);
+            GUILayout.Label($"[{item.type}] {ToClock(item.start_time)} - {ToClock(item.end_time)}", _caption);
+            GUILayout.Space(8);
+            GUILayout.Label(item.content, _logStyle);
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("关闭", _buttonGhost)) _showAnnouncementPopup = false;
+            if (_announcements.Count > 1 && GUILayout.Button("下一条", _buttonPrimary))
+            {
+                _popupAnnouncementIndex = (_popupAnnouncementIndex + 1) % _announcements.Count;
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
+        private void DrawSceneFade()
+        {
+            if (_sceneFadeAlpha <= 0.001f) return;
+            var old = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, Mathf.Clamp01(_sceneFadeAlpha));
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), _fadeTex);
+            GUI.color = old;
         }
 
         private void OnGUI()
@@ -640,11 +746,14 @@ namespace MmorpgClient.UI
             }
 
             GUILayout.EndArea();
+            DrawAnnouncementPopup();
+            DrawSceneFade();
         }
 
         private void DrawLandingStage()
         {
             GUILayout.Label("江湖快讯", _rootLabel);
+            GUILayout.Label("先看公告，再选服，再确认角色进入场景。", _caption);
 
             if (_loadingAnnouncements)
             {
@@ -680,6 +789,7 @@ namespace MmorpgClient.UI
             GUILayout.Space(10);
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("进入选服", _buttonPrimary)) _stage = LoginStage.ServerSelect;
+            if (_announcements.Count > 0 && GUILayout.Button("查看弹窗公告", _buttonGhost)) _showAnnouncementPopup = true;
             if (GUILayout.Button("刷新门面数据", _buttonGhost) && !_loadingZones && !_loadingAnnouncements)
             {
                 StartCoroutine(LoadGatewayFrontPage());
@@ -719,6 +829,7 @@ namespace MmorpgClient.UI
             GUILayout.BeginVertical();
             GUILayout.Label("选区详情", _rootLabel);
             GUILayout.Label(SelectedZoneSummary(), _caption);
+            GUILayout.Label(SelectedZoneHint(), _caption);
             GUILayout.Space(8);
             GUI.DrawTexture(GUILayoutUtility.GetRect(140, 24), _badgeTex, ScaleMode.StretchToFill);
             GUILayout.Label("推荐区服优先", _caption);
@@ -736,14 +847,36 @@ namespace MmorpgClient.UI
         {
             GUILayout.Label("角色确认", _rootLabel);
             GUILayout.Label("此处为原创Q版占位形象，后续可替换为美术角色模型。", _caption);
+            GUILayout.Label("当前后端 CreatePlayerRequest 为空请求，所以名字/职业仅作前端预选展示。", _caption);
             GUILayout.Space(8);
 
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(430));
-            GUILayout.Label("当前角色: 云行客", _rootLabel);
-            GUILayout.Label("武器: 青锋短剑", _caption);
-            GUILayout.Label("职业: 游侠", _caption);
+            GUILayout.Label("当前角色预设", _rootLabel);
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("昵称", GUILayout.Width(80));
+            _roleNameDraft = GUILayout.TextField(_roleNameDraft);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("职业", GUILayout.Width(80));
+            for (int i = 0; i < _roleArchetypes.Length; i++)
+            {
+                bool selected = GUILayout.Toggle(_selectedRoleIndex == i, _roleArchetypes[i], GUILayout.Width(92));
+                if (selected && _selectedRoleIndex != i)
+                {
+                    _selectedRoleIndex = i;
+                    ApplyPreviewRoleVisual();
+                }
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Label("当前角色: " + _roleNameDraft, _rootLabel);
+            GUILayout.Label("武器: " + _roleWeapons[_selectedRoleIndex], _caption);
+            GUILayout.Label("职业: " + _roleArchetypes[_selectedRoleIndex], _caption);
             GUILayout.Label("目标区服: " + SelectedZoneSummary(), _caption);
+            GUILayout.Label(SelectedZoneHint(), _caption);
 
             GUILayout.Space(8);
             GUILayout.BeginHorizontal();
