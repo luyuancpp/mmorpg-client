@@ -22,6 +22,7 @@ namespace MmorpgClient.UI.Screens
         private AppBootstrap _app;
         private GComponent _card;
         private GGraph _previewSwatch;
+        private GImage _previewPortrait;
         private GTextField _previewLabel;
         private GTextInput _nickField;
         private GTextField _statusLabel;
@@ -67,6 +68,13 @@ namespace MmorpgClient.UI.Screens
             _previewSwatch.SetSize(104, 104);
             _previewSwatch.DrawEllipse(104, 104, Tints[0]);
             _card.AddChild(_previewSwatch);
+
+            _previewPortrait = Theme.Image(Theme.Art.RoleWanderer, 104, 104);
+            if (_previewPortrait != null)
+            {
+                _previewPortrait.SetXY(x, y);
+                _card.AddChild(_previewPortrait);
+            }
 
             _previewLabel = Theme.P("", dim: false);
             _previewLabel.SetXY(x + 124, y + 40);
@@ -137,6 +145,8 @@ namespace MmorpgClient.UI.Screens
         {
             int i = Mathf.Clamp(_app.Session.RoleArchetypeIndex, 0, Archetypes.Length - 1);
             _previewSwatch?.DrawEllipse(104, 104, Tints[i]);
+            if (_previewPortrait != null)
+                Theme.SetImageTexture(_previewPortrait, i == 0 ? Theme.Art.RoleWanderer : i == 1 ? Theme.Art.RoleTalisman : Theme.Art.RoleSword);
             if (_previewLabel != null)
                 _previewLabel.text = $"{Archetypes[i]} · 武器: {Weapons[i]}";
         }

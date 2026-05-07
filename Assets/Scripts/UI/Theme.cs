@@ -13,6 +13,19 @@ namespace MmorpgClient.UI
         public const string UiPackageName = "qdao";
         public const string UiPackagePath = "UI/qdao/qdao";
 
+        public static class Art
+        {
+            public const string Backdrop = "UI/qdao/qdao_backdrop";
+            public const string LoginBanner = "UI/qdao/qdao_login_banner";
+            public const string ServerScroll = "UI/qdao/qdao_server_scroll";
+            public const string RoleWanderer = "UI/qdao/qdao_role_wanderer";
+            public const string RoleTalisman = "UI/qdao/qdao_role_talisman";
+            public const string RoleSword = "UI/qdao/qdao_role_sword";
+            public const string IconTalisman = "UI/qdao/qdao_icon_talisman";
+            public const string IconGate = "UI/qdao/qdao_icon_gate";
+            public const string CloudCorner = "UI/qdao/qdao_cloud_corner";
+        }
+
         public static class UiId
         {
             public const string LoginRoot = "LoginScreen";
@@ -77,6 +90,26 @@ namespace MmorpgClient.UI
             return root.GetChild(childName) as T;
         }
 
+        public static GImage Image(string resourcePath, float w, float h)
+        {
+            var tex = Resources.Load<Texture2D>(resourcePath);
+            if (tex == null) return null;
+
+            var img = new GImage();
+            img.texture = new NTexture(tex);
+            img.SetSize(w, h);
+            img.touchable = false;
+            return img;
+        }
+
+        public static void SetImageTexture(GImage img, string resourcePath)
+        {
+            if (img == null) return;
+            var tex = Resources.Load<Texture2D>(resourcePath);
+            if (tex != null)
+                img.texture = new NTexture(tex);
+        }
+
         // ── Builders (placeholder skin until .fui packages are authored) ──
 
         /// <summary>Card panel: solid fill + 1px gold edge, no .fui asset required.</summary>
@@ -99,6 +132,14 @@ namespace MmorpgClient.UI
             inner.SetXY(6, 6);
             inner.DrawRect(w - 12, h - 12, 1, new Color(1f, 1f, 1f, 0.08f), PanelInner);
             c.AddChild(inner);
+
+            var corner = Image(Art.CloudCorner, 84, 84);
+            if (corner != null)
+            {
+                corner.SetXY(w - 92, h - 88);
+                corner.alpha = 0.55f;
+                c.AddChild(corner);
+            }
 
             var titleBar = new GGraph();
             titleBar.SetXY(16, 12);

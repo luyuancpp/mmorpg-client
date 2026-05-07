@@ -44,6 +44,12 @@ namespace MmorpgClient.UI.Screens
             var logoutBtn = Theme.GhostButton("回山门", () => _app.Router.Show<LoginScreen>(), 88, 30);
             logoutBtn.SetXY(root.width - 100, 6);
             logoutBtn.AddRelation(root, RelationType.Right_Right);
+            var gateIcon = Theme.Image(Theme.Art.IconGate, 22, 22);
+            if (gateIcon != null)
+            {
+                gateIcon.SetXY(4, 4);
+                logoutBtn.AddChild(gateIcon);
+            }
             top.AddChild(logoutBtn);
             root.AddChild(top);
 
@@ -67,6 +73,12 @@ namespace MmorpgClient.UI.Screens
             skill.SetXY(root.width - 166, root.height - 76);
             skill.AddRelation(root, RelationType.Right_Right);
             skill.AddRelation(root, RelationType.Bottom_Bottom);
+            var talismanIcon = Theme.Image(Theme.Art.IconTalisman, 46, 46);
+            if (talismanIcon != null)
+            {
+                talismanIcon.SetXY(9, 7);
+                skill.AddChild(talismanIcon);
+            }
             root.AddChild(skill);
 
             return root;

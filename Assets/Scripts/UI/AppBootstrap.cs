@@ -35,6 +35,7 @@ namespace MmorpgClient.UI
 
         private GComponent _root;
         private GComponent _host;
+        private GImage     _backdropArt;
         private GGraph     _backdropTop;
         private GGraph     _backdropBottom;
 
@@ -98,20 +99,28 @@ namespace MmorpgClient.UI
             _root.AddRelation(GRoot.inst, RelationType.Size);
             GRoot.inst.AddChild(_root);
 
-            // backdrop layers
-            _backdropTop = new GGraph();
-            _backdropTop.DrawRect(_root.width, _root.height * 0.52f, 0, Color.clear, Theme.BgTop);
-            _root.AddChild(_backdropTop);
+            _backdropArt = Theme.Image(Theme.Art.Backdrop, _root.width, _root.height);
+            if (_backdropArt != null)
+            {
+                _backdropArt.AddRelation(_root, RelationType.Size);
+                _root.AddChild(_backdropArt);
+            }
+            else
+            {
+                _backdropTop = new GGraph();
+                _backdropTop.DrawRect(_root.width, _root.height * 0.52f, 0, Color.clear, Theme.BgTop);
+                _root.AddChild(_backdropTop);
 
-            _backdropBottom = new GGraph();
-            _backdropBottom.SetXY(0, _root.height * 0.52f);
-            _backdropBottom.DrawRect(_root.width, _root.height * 0.48f, 0, Color.clear, Theme.BgBottom);
-            _root.AddChild(_backdropBottom);
+                _backdropBottom = new GGraph();
+                _backdropBottom.SetXY(0, _root.height * 0.52f);
+                _backdropBottom.DrawRect(_root.width, _root.height * 0.48f, 0, Color.clear, Theme.BgBottom);
+                _root.AddChild(_backdropBottom);
 
-            var moon = new GGraph();
-            moon.SetXY(_root.width - 210, 44);
-            moon.DrawEllipse(120, 120, new Color(1f, 0.97f, 0.84f, 0.32f));
-            _root.AddChild(moon);
+                var moon = new GGraph();
+                moon.SetXY(_root.width - 210, 44);
+                moon.DrawEllipse(120, 120, new Color(1f, 0.97f, 0.84f, 0.32f));
+                _root.AddChild(moon);
+            }
 
             _host = new GComponent();
             _host.SetSize(_root.width, _root.height);
@@ -122,9 +131,10 @@ namespace MmorpgClient.UI
         {
             float w = GRoot.inst.width, h = GRoot.inst.height;
             _root.SetSize(w, h);
-            _backdropTop.DrawRect(w, h * 0.52f, 0, Color.clear, Theme.BgTop);
-            _backdropBottom.SetXY(0, h * 0.52f);
-            _backdropBottom.DrawRect(w, h * 0.48f, 0, Color.clear, Theme.BgBottom);
+            _backdropArt?.SetSize(w, h);
+            _backdropTop?.DrawRect(w, h * 0.52f, 0, Color.clear, Theme.BgTop);
+            _backdropBottom?.SetXY(0, h * 0.52f);
+            _backdropBottom?.DrawRect(w, h * 0.48f, 0, Color.clear, Theme.BgBottom);
             _host.SetSize(w, h);
             Router?.OnRootResize();
         }

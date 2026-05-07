@@ -34,6 +34,13 @@ namespace MmorpgClient.UI.Screens
             _card.AddRelation(root, RelationType.Center_Center);
             root.AddChild(_card);
 
+            var scroll = Theme.Image(Theme.Art.ServerScroll, 238, 136);
+            if (scroll != null)
+            {
+                scroll.SetXY(CW - 284, 12);
+                _card.AddChild(scroll);
+            }
+
             float x = 26, y = 20;
             var h1 = Theme.H1("道场择域"); h1.SetXY(x, y); _card.AddChild(h1); y += 44;
             var sub = Theme.P("请择一处灵脉安身，开启你的 Q 版修行", dim: false); sub.SetXY(x, y); _card.AddChild(sub); y += 30;

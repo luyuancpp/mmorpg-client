@@ -32,6 +32,13 @@ namespace MmorpgClient.UI.Screens
             _card.AddRelation(root, RelationType.Center_Center);
             root.AddChild(_card);
 
+            var banner = Theme.Image(Theme.Art.LoginBanner, 312, 156);
+            if (banner != null)
+            {
+                banner.SetXY(CW - 348, 22);
+                _card.AddChild(banner);
+            }
+
             float x = 26, y = 20;
             var h1 = Theme.H1("青云问道录");
             h1.SetXY(x, y);
