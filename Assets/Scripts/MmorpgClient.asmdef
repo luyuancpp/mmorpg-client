@@ -1,7 +1,9 @@
 {
   "name": "MmorpgClient",
   "rootNamespace": "MmorpgClient",
-  "references": [],
+  "references": [
+    "FairyGUI"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

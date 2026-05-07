@@ -1,13 +1,12 @@
 using System.Collections;
+using FairyGUI;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace MmorpgClient.UI.Screens
 {
     /// <summary>
     /// Cosmetic role preset picker + nickname. proto CreatePlayerRequest is
-    /// empty so the choice is purely client-side flavour; the actual
-    /// LoginAndEnterGame call fires when the user clicks "登录并进入".
+    /// empty so the choice is purely client-side flavour.
     /// </summary>
     public sealed class RoleCreateScreen : IScreen
     {
@@ -21,77 +20,68 @@ namespace MmorpgClient.UI.Screens
         };
 
         private AppBootstrap _app;
-        private VisualElement _previewSwatch;
-        private Label _previewLabel;
-        private TextField _nickField;
-        private Label _statusLabel;
-        private Button _enterBtn;
+        private GComponent _card;
+        private GGraph _previewSwatch;
+        private GTextField _previewLabel;
+        private GTextInput _nickField;
+        private GTextField _statusLabel;
+        private GComponent _enterBtn;
         private bool _busy;
 
-        public VisualElement Build(AppBootstrap app)
+        public GComponent Build(AppBootstrap app)
         {
             _app = app;
-            var root = new VisualElement();
-            root.style.flexGrow = 1;
-            root.style.alignItems = Align.Center;
-            root.style.justifyContent = Justify.Center;
+            var root = new GComponent();
+            root.SetSize(GRoot.inst.width, GRoot.inst.height);
 
-            var card = new VisualElement();
-            card.style.width = 760;
-            card.style.maxWidth = new Length(92, LengthUnit.Percent);
-            Theme.StylePanel(card);
-            root.Add(card);
+            const float CW = 760, CH = 540;
+            _card = Theme.Card(CW, CH);
+            _card.SetXY((root.width - CW) * 0.5f, (root.height - CH) * 0.5f);
+            _card.AddRelation(root, RelationType.Center_Center);
+            root.AddChild(_card);
 
-            card.Add(Theme.H1("选择门派"));
+            float x = 22, y = 18;
+            var h1 = Theme.H1("选择门派"); h1.SetXY(x, y); _card.AddChild(h1); y += 38;
             var z = _app.Session.SelectedZone;
-            card.Add(Theme.P(z != null ? $"将进入: #{z.zone_id} {z.name}" : "未选择区服"));
+            var sub = Theme.P(z != null ? $"将进入: #{z.zone_id} {z.name}" : "未选择区服");
+            sub.SetXY(x, y); _card.AddChild(sub); y += 28;
 
-            // preset row
-            var row = new VisualElement();
-            row.style.flexDirection = FlexDirection.Row;
-            row.style.marginTop = 12;
+            // archetype buttons row
+            float btnW = (CW - x * 2 - 16) / 3f;
             for (int i = 0; i < Archetypes.Length; i++)
             {
                 int idx = i;
-                var btn = Theme.GhostButton(Archetypes[i], () => SetArchetype(idx));
-                btn.style.flexGrow = 1;
-                btn.style.height = 44;
-                row.Add(btn);
+                var btn = Theme.GhostButton(Archetypes[i], () => SetArchetype(idx), btnW, 44);
+                btn.SetXY(x + i * (btnW + 8), y);
+                _card.AddChild(btn);
             }
-            card.Add(row);
+            y += 60;
 
             // preview block
-            var preview = new VisualElement();
-            preview.style.flexDirection = FlexDirection.Row;
-            preview.style.marginTop = 16;
-            preview.style.alignItems = Align.Center;
-            _previewSwatch = new VisualElement();
-            _previewSwatch.style.width = 96;
-            _previewSwatch.style.height = 96;
-            _previewSwatch.style.borderTopLeftRadius = _previewSwatch.style.borderTopRightRadius =
-                _previewSwatch.style.borderBottomLeftRadius = _previewSwatch.style.borderBottomRightRadius = 48;
-            _previewSwatch.style.marginRight = 16;
+            _previewSwatch = new GGraph();
+            _previewSwatch.SetXY(x, y);
+            _previewSwatch.SetSize(96, 96);
+            _previewSwatch.DrawEllipse(96, 96, Tints[0]);
+            _card.AddChild(_previewSwatch);
+
             _previewLabel = Theme.P("", dim: false);
-            _previewLabel.style.fontSize = 16;
-            preview.Add(_previewSwatch);
-            preview.Add(_previewLabel);
-            card.Add(preview);
+            _previewLabel.SetXY(x + 110, y + 36);
+            _previewLabel.SetSize(CW - x - 130, 24);
+            _previewLabel.textFormat = new TextFormat { color = Theme.TextPrim, size = 16 };
+            _previewLabel.ApplyFormat();
+            _card.AddChild(_previewLabel);
+            y += 110;
 
-            _nickField = Theme.LabeledField("角色名", _app.Session.RoleNickname);
-            _nickField.style.marginTop = 14;
-            card.Add(_nickField);
+            (var nickRow, _nickField) = Theme.LabeledInput("角色名", _app.Session.RoleNickname, CW - x * 2);
+            nickRow.SetXY(x, y); _card.AddChild(nickRow); y += 40;
 
-            var btnRow = new VisualElement();
-            btnRow.style.flexDirection = FlexDirection.Row;
-            btnRow.style.marginTop = 16;
-            _enterBtn = Theme.PrimaryButton("登录并进入", OnEnterPressed);
-            btnRow.Add(_enterBtn);
-            btnRow.Add(Theme.GhostButton("返回", () => _app.Router.Show<ServerSelectScreen>()));
-            card.Add(btnRow);
+            _enterBtn = Theme.PrimaryButton("登录并进入", OnEnterPressed, 150);
+            _enterBtn.SetXY(x, y); _card.AddChild(_enterBtn);
+            var backBtn = Theme.GhostButton("返回", () => _app.Router.Show<ServerSelectScreen>());
+            backBtn.SetXY(x + 160, y); _card.AddChild(backBtn);
+            y += 42;
 
-            _statusLabel = Theme.P("");
-            _statusLabel.style.marginTop = 8;
-            card.Add(_statusLabel);
+            _statusLabel = Theme.P(""); _statusLabel.SetXY(x, y); _card.AddChild(_statusLabel);
 
             ApplyPreview();
             return root;
@@ -101,40 +91,30 @@ namespace MmorpgClient.UI.Screens
         public void OnExit() { }
         public void Tick(float dt) { }
 
-        private void SetArchetype(int idx)
-        {
-            _app.Session.RoleArchetypeIndex = idx;
-            ApplyPreview();
-        }
+        private void SetArchetype(int idx) { _app.Session.RoleArchetypeIndex = idx; ApplyPreview(); }
 
         private void ApplyPreview()
         {
             int i = Mathf.Clamp(_app.Session.RoleArchetypeIndex, 0, Archetypes.Length - 1);
-            _previewSwatch.style.backgroundColor = Tints[i];
+            _previewSwatch.DrawEllipse(96, 96, Tints[i]);
             _previewLabel.text = $"{Archetypes[i]} · 武器: {Weapons[i]}";
         }
 
         private void OnEnterPressed()
         {
             if (_busy) return;
-            _app.Session.RoleNickname = _nickField.value;
+            _app.Session.RoleNickname = _nickField.text;
             var z = _app.Session.SelectedZone;
-            if (z == null)
-            {
-                _statusLabel.text = "未选择区服";
-                _statusLabel.style.color = Theme.TextWarn;
-                return;
-            }
+            if (z == null) { _statusLabel.text = "未选择区服"; return; }
             _busy = true;
-            _enterBtn.SetEnabled(false);
-            _statusLabel.style.color = Theme.TextDim;
+            _enterBtn.touchable = false;
+            _enterBtn.alpha = 0.5f;
             _statusLabel.text = "登录中...";
             _app.Run(DoLogin(z.zone_id));
         }
 
         private IEnumerator DoLogin(uint zoneId)
         {
-            // Re-create GameClient with possibly-edited gateway URL.
             yield return _app.GameClient.LoginAndEnterGame(
                 zoneId, _app.Session.Account, _app.Session.Password,
                 onSuccess: () =>
@@ -145,9 +125,9 @@ namespace MmorpgClient.UI.Screens
                 onError: e =>
                 {
                     _statusLabel.text = "登录失败: " + e;
-                    _statusLabel.style.color = Theme.TextWarn;
                     _busy = false;
-                    _enterBtn.SetEnabled(true);
+                    _enterBtn.touchable = true;
+                    _enterBtn.alpha = 1f;
                 });
         }
     }

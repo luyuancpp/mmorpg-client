@@ -1,11 +1,12 @@
 using UnityEngine;
-using UnityEngine.UIElements;
+using FairyGUI;
 
 namespace MmorpgClient.UI
 {
     /// <summary>
-    /// Centralised colour / spacing constants for the in-code UI Toolkit screens.
-    /// Replace with a real <c>StyleSheet</c> (USS) when the art team ships final visuals.
+    /// Centralised colours / spacing / helper builders for code-built FairyGUI
+    /// components. When the art team ships .fui packages this file becomes
+    /// pure colour/font constants used by skin scripts.
     /// </summary>
     public static class Theme
     {
@@ -17,91 +18,128 @@ namespace MmorpgClient.UI
         public static readonly Color TextDim  = new Color(0.74f, 0.78f, 0.74f);
         public static readonly Color TextWarn = new Color(0.95f, 0.55f, 0.40f);
         public static readonly Color BtnPrim  = new Color(0.20f, 0.55f, 0.42f);
-        public static readonly Color BtnPrimH = new Color(0.27f, 0.66f, 0.50f);
         public static readonly Color BtnGhost = new Color(0.16f, 0.18f, 0.22f, 0.92f);
-        public static readonly Color BtnGhostH= new Color(0.22f, 0.26f, 0.30f, 0.96f);
         public static readonly Color ZoneIdle = new Color(0.13f, 0.15f, 0.19f, 0.92f);
         public static readonly Color ZoneSel  = new Color(0.22f, 0.36f, 0.30f, 0.98f);
         public static readonly Color Accent   = new Color(0.95f, 0.78f, 0.36f);
 
-        public static void StylePanel(VisualElement e)
+        // ── Builders (placeholder skin until .fui packages are authored) ──
+
+        /// <summary>Card panel: solid fill + 1px gold edge, no .fui asset required.</summary>
+        public static GComponent Card(float w, float h)
         {
-            e.style.backgroundColor = Panel;
-            e.style.borderTopWidth = e.style.borderBottomWidth = e.style.borderLeftWidth = e.style.borderRightWidth = 1;
-            e.style.borderTopColor = e.style.borderBottomColor = e.style.borderLeftColor = e.style.borderRightColor = PanelEdge;
-            e.style.borderTopLeftRadius = e.style.borderTopRightRadius = e.style.borderBottomLeftRadius = e.style.borderBottomRightRadius = 8;
-            e.style.paddingTop = e.style.paddingBottom = 18;
-            e.style.paddingLeft = e.style.paddingRight = 22;
+            var c = new GComponent();
+            c.SetSize(w, h);
+            c.opaque = true;
+
+            var bg = new GGraph();
+            bg.SetSize(w, h);
+            bg.DrawRect(1, PanelEdge, Panel);
+            c.AddChild(bg);
+            return c;
         }
 
-        public static Label H1(string text)
+        public static GTextField H1(string text)
         {
-            var l = new Label(text);
-            l.style.fontSize = 30;
-            l.style.unityFontStyleAndWeight = FontStyle.Bold;
-            l.style.color = Accent;
-            l.style.marginBottom = 4;
-            return l;
+            var t = new GTextField();
+            t.text = text;
+            t.textFormat = new TextFormat { color = Accent, size = 28, bold = true, align = AlignType.Left };
+            t.ApplyFormat();
+            t.autoSize = AutoSizeType.Both;
+            return t;
         }
 
-        public static Label H2(string text)
+        public static GTextField H2(string text)
         {
-            var l = new Label(text);
-            l.style.fontSize = 18;
-            l.style.unityFontStyleAndWeight = FontStyle.Bold;
-            l.style.color = TextPrim;
-            l.style.marginTop = 8;
-            l.style.marginBottom = 4;
-            return l;
+            var t = new GTextField();
+            t.text = text;
+            t.textFormat = new TextFormat { color = TextPrim, size = 18, bold = true, align = AlignType.Left };
+            t.ApplyFormat();
+            t.autoSize = AutoSizeType.Both;
+            return t;
         }
 
-        public static Label P(string text, bool dim = true)
+        public static GTextField P(string text, bool dim = true)
         {
-            var l = new Label(text);
-            l.style.fontSize = 13;
-            l.style.color = dim ? TextDim : TextPrim;
-            l.style.whiteSpace = WhiteSpace.Normal;
-            return l;
+            var t = new GTextField();
+            t.text = text;
+            t.textFormat = new TextFormat
+            {
+                color = dim ? TextDim : TextPrim,
+                size  = 13,
+                align = AlignType.Left,
+            };
+            t.ApplyFormat();
+            t.autoSize = AutoSizeType.Both;
+            t.singleLine = false;
+            return t;
         }
 
-        public static Button PrimaryButton(string text, System.Action click)
+        public static GComponent FlatButton(string text, float w, float h, Color baseCol, Color textCol, System.Action onClick)
         {
-            var b = new Button(click) { text = text };
-            b.style.backgroundColor = BtnPrim;
-            b.style.color = Color.white;
-            b.style.unityFontStyleAndWeight = FontStyle.Bold;
-            b.style.height = 36;
-            b.style.minWidth = 120;
-            b.style.marginRight = 6;
-            b.style.borderTopLeftRadius = b.style.borderTopRightRadius = b.style.borderBottomLeftRadius = b.style.borderBottomRightRadius = 4;
-            b.style.borderTopWidth = b.style.borderBottomWidth = b.style.borderLeftWidth = b.style.borderRightWidth = 0;
-            b.RegisterCallback<MouseEnterEvent>(_ => b.style.backgroundColor = BtnPrimH);
-            b.RegisterCallback<MouseLeaveEvent>(_ => b.style.backgroundColor = BtnPrim);
-            return b;
+            var btn = new GComponent();
+            btn.SetSize(w, h);
+            btn.touchable = true;
+            btn.opaque = true;
+
+            var bg = new GGraph();
+            bg.SetSize(w, h);
+            bg.DrawRect(0, Color.clear, baseCol);
+            btn.AddChild(bg);
+
+            var label = new GTextField();
+            label.SetSize(w, h);
+            label.text = text;
+            label.textFormat = new TextFormat
+            {
+                color = textCol, size = 14, bold = true,
+                align = AlignType.Center, verticalAlign = VertAlignType.Middle,
+            };
+            label.ApplyFormat();
+            btn.AddChild(label);
+
+            var hover = new Color(Mathf.Min(1, baseCol.r * 1.18f), Mathf.Min(1, baseCol.g * 1.18f), Mathf.Min(1, baseCol.b * 1.18f), baseCol.a);
+            btn.onRollOver.Add(() => bg.DrawRect(0, Color.clear, hover));
+            btn.onRollOut.Add(() => bg.DrawRect(0, Color.clear, baseCol));
+            btn.onClick.Add(_ => onClick?.Invoke());
+            return btn;
         }
 
-        public static Button GhostButton(string text, System.Action click)
-        {
-            var b = new Button(click) { text = text };
-            b.style.backgroundColor = BtnGhost;
-            b.style.color = TextPrim;
-            b.style.height = 32;
-            b.style.minWidth = 90;
-            b.style.marginRight = 6;
-            b.style.borderTopLeftRadius = b.style.borderTopRightRadius = b.style.borderBottomLeftRadius = b.style.borderBottomRightRadius = 4;
-            b.style.borderTopWidth = b.style.borderBottomWidth = b.style.borderLeftWidth = b.style.borderRightWidth = 0;
-            b.RegisterCallback<MouseEnterEvent>(_ => b.style.backgroundColor = BtnGhostH);
-            b.RegisterCallback<MouseLeaveEvent>(_ => b.style.backgroundColor = BtnGhost);
-            return b;
-        }
+        public static GComponent PrimaryButton(string text, System.Action onClick, float w = 140, float h = 36)
+            => FlatButton(text, w, h, BtnPrim, Color.white, onClick);
 
-        public static TextField LabeledField(string label, string value, bool isPassword = false)
+        public static GComponent GhostButton(string text, System.Action onClick, float w = 110, float h = 32)
+            => FlatButton(text, w, h, BtnGhost, TextPrim, onClick);
+
+        public static (GComponent row, GTextInput field) LabeledInput(string label, string value, float rowW, bool isPassword = false)
         {
-            var f = new TextField(label) { value = value, isPasswordField = isPassword };
-            f.style.marginBottom = 4;
-            f.labelElement.style.minWidth = 90;
-            f.labelElement.style.color = TextDim;
-            return f;
+            var row = new GComponent();
+            row.SetSize(rowW, 28);
+
+            var l = new GTextField();
+            l.SetPosition(0, 4);
+            l.SetSize(110, 24);
+            l.text = label;
+            l.textFormat = new TextFormat { color = TextDim, size = 13, align = AlignType.Left };
+            l.ApplyFormat();
+            row.AddChild(l);
+
+            var bg = new GGraph();
+            bg.SetPosition(112, 0);
+            bg.SetSize(rowW - 112, 28);
+            bg.DrawRect(1, new Color(1, 1, 1, 0.18f), new Color(1, 1, 1, 0.06f));
+            row.AddChild(bg);
+
+            var input = new GTextInput();
+            input.SetPosition(120, 2);
+            input.SetSize(rowW - 132, 24);
+            input.text = value;
+            input.displayAsPassword = isPassword;
+            input.textFormat = new TextFormat { color = TextPrim, size = 14, align = AlignType.Left };
+            input.ApplyFormat();
+            row.AddChild(input);
+
+            return (row, input);
         }
     }
 }

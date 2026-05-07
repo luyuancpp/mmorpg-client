@@ -1,78 +1,72 @@
-using System.Linq;
+using System.Collections.Generic;
+using FairyGUI;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace MmorpgClient.UI.Screens
 {
     /// <summary>
-    /// In-world HUD overlay. Minimal v1: top bar with role/zone, bottom right
-    /// skill button, bottom log panel. Replace with proper HUD UXML later.
+    /// In-world HUD overlay. Minimal v1: top bar with role/zone, bottom-right
+    /// skill button, bottom-left scrolling log panel.
     /// </summary>
     public sealed class HudScreen : IScreen
     {
         private AppBootstrap _app;
-        private Label _topbarLabel;
-        private ScrollView _logView;
-        private System.Collections.Generic.Queue<string> _logBuffer = new();
+        private GTextField _topbarLabel;
+        private GComponent _logPanel;
+        private GTextField _logText;
+        private readonly Queue<string> _logBuffer = new();
 
-        public VisualElement Build(AppBootstrap app)
+        public GComponent Build(AppBootstrap app)
         {
             _app = app;
-            var root = new VisualElement();
-            root.style.flexGrow = 1;
-            root.pickingMode = PickingMode.Ignore;
+            var root = new GComponent();
+            root.SetSize(GRoot.inst.width, GRoot.inst.height);
+            root.opaque = false;
 
             // Top bar
-            var top = new VisualElement();
-            top.style.flexDirection = FlexDirection.Row;
-            top.style.alignItems = Align.Center;
-            top.style.height = 36;
-            top.style.paddingLeft = top.style.paddingRight = 12;
-            top.style.backgroundColor = new Color(0, 0, 0, 0.55f);
-            _topbarLabel = new Label();
-            _topbarLabel.style.color = Theme.TextPrim;
-            _topbarLabel.style.flexGrow = 1;
-            top.Add(_topbarLabel);
-            top.Add(Theme.GhostButton("登出", OnLogout));
-            root.Add(top);
+            var top = new GComponent();
+            top.SetSize(root.width, 36);
+            top.AddRelation(root, RelationType.Width);
+            var topBg = new GGraph(); topBg.SetSize(root.width, 36); topBg.DrawRect(0, Color.clear, new Color(0, 0, 0, 0.55f)); topBg.AddRelation(root, RelationType.Width);
+            top.AddChild(topBg);
 
-            var spacer = new VisualElement();
-            spacer.style.flexGrow = 1;
-            root.Add(spacer);
+            _topbarLabel = new GTextField();
+            _topbarLabel.SetXY(12, 8);
+            _topbarLabel.SetSize(root.width - 120, 24);
+            _topbarLabel.textFormat = new TextFormat { color = Theme.TextPrim, size = 14, align = AlignType.Left };
+            _topbarLabel.ApplyFormat();
+            _topbarLabel.AddRelation(root, RelationType.Width);
+            top.AddChild(_topbarLabel);
 
-            // Bottom row
-            var bottom = new VisualElement();
-            bottom.style.flexDirection = FlexDirection.Row;
-            bottom.style.alignItems = Align.FlexEnd;
-            bottom.style.paddingLeft = bottom.style.paddingRight = 16;
-            bottom.style.paddingBottom = 16;
+            var logoutBtn = Theme.GhostButton("登出", () => _app.Router.Show<LoginScreen>(), 80, 28);
+            logoutBtn.SetXY(root.width - 92, 4);
+            logoutBtn.AddRelation(root, RelationType.Right_Right);
+            top.AddChild(logoutBtn);
+            root.AddChild(top);
 
-            // Log panel (left)
-            var logPanel = new VisualElement();
-            logPanel.style.width = 360;
-            logPanel.style.height = 160;
-            logPanel.style.backgroundColor = new Color(0, 0, 0, 0.55f);
-            logPanel.style.paddingLeft = logPanel.style.paddingRight = 8;
-            logPanel.style.paddingTop = logPanel.style.paddingBottom = 6;
-            logPanel.style.borderTopLeftRadius = logPanel.style.borderTopRightRadius =
-                logPanel.style.borderBottomLeftRadius = logPanel.style.borderBottomRightRadius = 4;
-            _logView = new ScrollView { mode = ScrollViewMode.Vertical };
-            _logView.style.flexGrow = 1;
-            logPanel.Add(_logView);
-            bottom.Add(logPanel);
+            // Bottom-left log panel
+            _logPanel = new GComponent();
+            _logPanel.SetSize(360, 160);
+            _logPanel.SetXY(16, root.height - 176);
+            _logPanel.AddRelation(root, RelationType.Bottom_Bottom);
+            var lbg = new GGraph(); lbg.SetSize(360, 160); lbg.DrawRect(0, Color.clear, new Color(0, 0, 0, 0.55f));
+            _logPanel.AddChild(lbg);
+            _logText = new GTextField();
+            _logText.SetXY(8, 6);
+            _logText.SetSize(344, 148);
+            _logText.singleLine = false;
+            _logText.textFormat = new TextFormat { color = Theme.TextDim, size = 11, align = AlignType.Left };
+            _logText.ApplyFormat();
+            _logPanel.AddChild(_logText);
+            root.AddChild(_logPanel);
 
-            var bottomSpacer = new VisualElement();
-            bottomSpacer.style.flexGrow = 1;
-            bottom.Add(bottomSpacer);
+            // Bottom-right skill button
+            var skill = Theme.PrimaryButton("释放技能", OnReleaseSkill, 150, 60);
+            skill.SetXY(root.width - 166, root.height - 76);
+            skill.AddRelation(root, RelationType.Right_Right);
+            skill.AddRelation(root, RelationType.Bottom_Bottom);
+            root.AddChild(skill);
 
-            // Skill button (right)
-            var skill = Theme.PrimaryButton("释放技能", OnReleaseSkill);
-            skill.style.width = 140;
-            skill.style.height = 56;
-            skill.style.fontSize = 16;
-            bottom.Add(skill);
-
-            root.Add(bottom);
             return root;
         }
 
@@ -101,21 +95,11 @@ namespace MmorpgClient.UI.Screens
         {
             _logBuffer.Enqueue(msg);
             while (_logBuffer.Count > 60) _logBuffer.Dequeue();
-            if (_logView == null) return;
-            _logView.Clear();
-            foreach (var s in _logBuffer)
-            {
-                var l = new Label(s);
-                l.style.color = Theme.TextDim;
-                l.style.fontSize = 11;
-                l.style.whiteSpace = WhiteSpace.Normal;
-                _logView.Add(l);
-            }
+            _logText.text = string.Join("\n", _logBuffer);
         }
 
         private void OnReleaseSkill()
         {
-            // pick first non-local actor as target if available
             ulong target = 0;
             var world = _app.GameClient.World;
             if (world != null)
@@ -128,11 +112,7 @@ namespace MmorpgClient.UI.Screens
             }
             _app.GameClient.ReleaseSkill(1001, target);
             AppendLog($"[skill] release 1001 -> {target}");
-        }
-
-        private void OnLogout()
-        {
-            _app.Router.Show<LoginScreen>();
+            UpdateTopBar();
         }
     }
 }

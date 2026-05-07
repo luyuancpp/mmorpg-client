@@ -1,66 +1,80 @@
 using System.Collections;
-using MmorpgClient.Net;
-using UnityEngine;
-using UnityEngine.UIElements;
+using FairyGUI;
 
 namespace MmorpgClient.UI.Screens
 {
     /// <summary>
-    /// First screen: shows announcements + account/password form. No login
-    /// request is fired here - clicking "进入选服" hands off to ServerSelectScreen
-    /// which assigns the gate based on the chosen zone.
+    /// First screen: announcements + account/password form. No login request
+    /// fires here - clicking 进入选服 hands off to <see cref="ServerSelectScreen"/>.
     /// </summary>
     public sealed class LoginScreen : IScreen
     {
         private AppBootstrap _app;
-        private TextField _accountField;
-        private TextField _passwordField;
-        private TextField _gatewayField;
-        private ScrollView _announceList;
-        private Label _statusLabel;
+        private GComponent _card;
+        private GTextInput _gatewayField, _accountField, _passwordField;
+        private GComponent _announceList;
+        private GTextField _statusLabel;
         private bool _loading;
 
-        public VisualElement Build(AppBootstrap app)
+        public GComponent Build(AppBootstrap app)
         {
             _app = app;
-            var root = new VisualElement();
-            root.style.flexGrow = 1;
-            root.style.alignItems = Align.Center;
-            root.style.justifyContent = Justify.Center;
+            var root = new GComponent();
+            root.SetSize(GRoot.inst.width, GRoot.inst.height);
 
-            var card = new VisualElement();
-            card.style.width = new Length(720, LengthUnit.Pixel);
-            card.style.maxWidth = new Length(92, LengthUnit.Percent);
-            Theme.StylePanel(card);
-            root.Add(card);
+            const float CW = 720, CH = 600;
+            _card = Theme.Card(CW, CH);
+            _card.SetXY((root.width - CW) * 0.5f, (root.height - CH) * 0.5f);
+            _card.AddRelation(root, RelationType.Center_Center);
+            root.AddChild(_card);
 
-            card.Add(Theme.H1("云岚纪行"));
-            card.Add(Theme.P("Mmorpg Client · 正式登录界面 (UI Toolkit)"));
+            float x = 22, y = 18;
+            var h1 = Theme.H1("云岚纪行");
+            h1.SetXY(x, y);
+            _card.AddChild(h1);
+            y += 38;
 
-            card.Add(Theme.H2("江湖快讯"));
-            _announceList = new ScrollView { mode = ScrollViewMode.Vertical };
-            _announceList.style.height = 180;
-            _announceList.style.marginBottom = 8;
-            card.Add(_announceList);
+            var sub = Theme.P("Mmorpg Client · 正式登录界面 (FairyGUI)");
+            sub.SetXY(x, y);
+            _card.AddChild(sub);
+            y += 24;
 
-            card.Add(Theme.H2("账号"));
-            _gatewayField  = Theme.LabeledField("Gateway", _app.Session.GatewayBaseUrl);
-            _accountField  = Theme.LabeledField("Account", _app.Session.Account);
-            _passwordField = Theme.LabeledField("Password", _app.Session.Password, isPassword: true);
-            card.Add(_gatewayField);
-            card.Add(_accountField);
-            card.Add(_passwordField);
+            var h2 = Theme.H2("江湖快讯");
+            h2.SetXY(x, y);
+            _card.AddChild(h2);
+            y += 28;
 
-            var btnRow = new VisualElement();
-            btnRow.style.flexDirection = FlexDirection.Row;
-            btnRow.style.marginTop = 12;
-            btnRow.Add(Theme.PrimaryButton("进入选服", OnEnterServerSelect));
-            btnRow.Add(Theme.GhostButton("刷新公告", () => _app.Run(LoadAnnouncements())));
-            card.Add(btnRow);
+            // announcement list container with simple clipping
+            _announceList = new GComponent();
+            _announceList.SetXY(x, y);
+            _announceList.SetSize(CW - x * 2, 200);
+            _announceList.opaque = false;
+            _card.AddChild(_announceList);
+            y += 210;
 
-            _statusLabel = Theme.P("", dim: true);
-            _statusLabel.style.marginTop = 8;
-            card.Add(_statusLabel);
+            var h3 = Theme.H2("账号");
+            h3.SetXY(x, y);
+            _card.AddChild(h3);
+            y += 28;
+
+            (var gwRow, _gatewayField)  = Theme.LabeledInput("Gateway",  app.Session.GatewayBaseUrl, CW - x * 2);
+            gwRow.SetXY(x, y); _card.AddChild(gwRow); y += 34;
+            (var acRow, _accountField)  = Theme.LabeledInput("Account",  app.Session.Account,        CW - x * 2);
+            acRow.SetXY(x, y); _card.AddChild(acRow); y += 34;
+            (var pwRow, _passwordField) = Theme.LabeledInput("Password", app.Session.Password,       CW - x * 2, isPassword: true);
+            pwRow.SetXY(x, y); _card.AddChild(pwRow); y += 40;
+
+            var btnEnter   = Theme.PrimaryButton("进入选服", OnEnterServerSelect, 130);
+            btnEnter.SetXY(x, y);
+            _card.AddChild(btnEnter);
+            var btnRefresh = Theme.GhostButton("刷新公告", () => _app.Run(LoadAnnouncements()));
+            btnRefresh.SetXY(x + 140, y);
+            _card.AddChild(btnRefresh);
+            y += 42;
+
+            _statusLabel = Theme.P("");
+            _statusLabel.SetXY(x, y);
+            _card.AddChild(_statusLabel);
 
             return root;
         }
@@ -70,7 +84,7 @@ namespace MmorpgClient.UI.Screens
             if (_app.Session.Announcements.Count == 0 && !_loading)
                 _app.Run(LoadAnnouncements());
             else
-                RebuildAnnouncementList();
+                Rebuild();
         }
 
         public void OnExit() { }
@@ -78,9 +92,9 @@ namespace MmorpgClient.UI.Screens
 
         private void OnEnterServerSelect()
         {
-            _app.Session.GatewayBaseUrl = _gatewayField.value;
-            _app.Session.Account  = _accountField.value;
-            _app.Session.Password = _passwordField.value;
+            _app.Session.GatewayBaseUrl = _gatewayField.text;
+            _app.Session.Account  = _accountField.text;
+            _app.Session.Password = _passwordField.text;
             _app.Router.Show<ServerSelectScreen>();
         }
 
@@ -88,47 +102,50 @@ namespace MmorpgClient.UI.Screens
         {
             _loading = true;
             _statusLabel.text = "正在拉取公告...";
-            _statusLabel.style.color = Theme.TextDim;
-
             yield return _app.Gateway.GetAnnouncements(
                 resp =>
                 {
                     _app.Session.Announcements.Clear();
                     if (resp?.items != null) _app.Session.Announcements.AddRange(resp.items);
-                    RebuildAnnouncementList();
+                    Rebuild();
                     _statusLabel.text = $"公告 {_app.Session.Announcements.Count} 条";
                 },
                 err =>
                 {
                     _statusLabel.text = "公告拉取失败: " + err;
-                    _statusLabel.style.color = Theme.TextWarn;
                 });
             _loading = false;
         }
 
-        private void RebuildAnnouncementList()
+        private void Rebuild()
         {
-            _announceList.Clear();
+            _announceList.RemoveChildren(0, -1, true);
+            float y = 0;
             if (_app.Session.Announcements.Count == 0)
             {
-                _announceList.Add(Theme.P("暂无公告"));
+                var empty = Theme.P("暂无公告");
+                empty.SetXY(4, 0);
+                _announceList.AddChild(empty);
                 return;
             }
             foreach (var a in _app.Session.Announcements)
             {
-                var row = new VisualElement();
-                row.style.marginBottom = 6;
-                row.style.paddingTop = row.style.paddingBottom = 4;
-                row.style.borderBottomWidth = 1;
-                row.style.borderBottomColor = new Color(1, 1, 1, 0.05f);
-                var head = new Label($"[{a.type}] {a.title}");
-                head.style.color = Theme.Accent;
-                head.style.unityFontStyleAndWeight = FontStyle.Bold;
-                row.Add(head);
+                var head = new GTextField();
+                head.text = $"[{a.type}] {a.title}";
+                head.textFormat = new TextFormat { color = Theme.Accent, size = 14, bold = true };
+                head.ApplyFormat();
+                head.autoSize = AutoSizeType.Both;
+                head.SetXY(4, y);
+                _announceList.AddChild(head);
+                y += 20;
+
                 var body = Theme.P(a.content ?? "");
-                body.style.whiteSpace = WhiteSpace.Normal;
-                row.Add(body);
-                _announceList.Add(row);
+                body.SetSize(_announceList.width - 8, 40);
+                body.singleLine = false;
+                body.SetXY(4, y);
+                _announceList.AddChild(body);
+                y += 40;
+                if (y > _announceList.height - 20) break;
             }
         }
     }

@@ -1,18 +1,17 @@
-using System;
 using System.Collections;
+using FairyGUI;
 using MmorpgClient.Game;
 using MmorpgClient.Net;
 using MmorpgClient.UI.Screens;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace MmorpgClient.UI
 {
     /// <summary>
-    /// Single entry point for the production client. Auto-spawns on play (no
-    /// scene asset needed), constructs the UI Toolkit root, the screen router,
-    /// the long-lived <see cref="GameClient"/> and the scene rig (camera +
-    /// directional light). Screens drive transitions through <see cref="Router"/>.
+    /// Single entry point for the production client. Auto-spawns on play
+    /// (no scene asset required), bootstraps the FairyGUI Stage / GRoot,
+    /// owns the long-lived <see cref="GameClient"/> + <see cref="GatewayHttpClient"/>
+    /// and drives the screen stack via <see cref="Router"/>.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class AppBootstrap : MonoBehaviour
@@ -33,25 +32,26 @@ namespace MmorpgClient.UI
         public GatewayHttpClient Gateway { get; private set; }
         public ScreenRouter Router { get; private set; }
 
-        private UIDocument _doc;
-        private PanelSettings _panel;
+        private GComponent _root;
+        private GComponent _host;
+        private GGraph     _backdropTop;
+        private GGraph     _backdropBottom;
 
         private void Awake()
         {
-            Debug.Log("[AppBootstrap] Awake");
+            Debug.Log("[AppBootstrap] Awake (FairyGUI mode)");
 
             EnsureSceneRig();
+            EnsureFairyGUIStage();
 
             Session    = new SessionModel();
             Gateway    = new GatewayHttpClient(Session.GatewayBaseUrl);
             GameClient = new GameClient(Session.GatewayBaseUrl);
             GameClient.OnLog += s => Debug.Log("[GameClient] " + s);
 
-            BuildUiDocument();
-            Router = new ScreenRouter(this, _doc.rootVisualElement);
-
-            // Background gradient on the root container
-            ApplyRootBackground(_doc.rootVisualElement);
+            BuildRoot();
+            Router = new ScreenRouter(this, _host);
+            GRoot.inst.onSizeChanged.Add(OnRootResize);
 
             Router.Show<LoginScreen>();
         }
@@ -67,35 +67,47 @@ namespace MmorpgClient.UI
 
         // ───────────────────────────────────────────────────────────
 
-        private void BuildUiDocument()
+        private void EnsureFairyGUIStage()
         {
-            _panel = ScriptableObject.CreateInstance<PanelSettings>();
-            _panel.name = "MmorpgClient.PanelSettings";
-            _panel.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-            _panel.referenceResolution = new Vector2Int(1920, 1080);
-            _panel.match = 0.5f;
-            _panel.sortingOrder = 100;
-            // Do not assign a theme stylesheet - styles are inlined via Theme.cs.
-            _panel.themeStyleSheet = null;
-
-            _doc = gameObject.AddComponent<UIDocument>();
-            _doc.panelSettings = _panel;
-            _doc.rootVisualElement.style.flexGrow = 1;
+            // Touching Stage.inst lazily creates the FairyGUI stage if absent.
+            // Touch GRoot.inst to ensure the root container exists.
+            _ = Stage.inst;
+            _ = GRoot.inst;
         }
 
-        private static void ApplyRootBackground(VisualElement root)
+        private void BuildRoot()
         {
-            // Vertical-ish gradient via two stacked layers.
-            root.style.backgroundColor = Theme.BgTop;
-            var bottom = new VisualElement();
-            bottom.style.position = Position.Absolute;
-            bottom.style.left = 0;
-            bottom.style.right = 0;
-            bottom.style.bottom = 0;
-            bottom.style.height = new Length(60, LengthUnit.Percent);
-            bottom.style.backgroundColor = Theme.BgBottom;
-            bottom.style.opacity = 0.85f;
-            root.Insert(0, bottom);
+            _root = new GComponent();
+            _root.SetSize(GRoot.inst.width, GRoot.inst.height);
+            _root.AddRelation(GRoot.inst, RelationType.Size);
+            GRoot.inst.AddChild(_root);
+
+            // backdrop layers
+            _backdropTop = new GGraph();
+            _backdropTop.SetSize(_root.width, _root.height * 0.4f);
+            _backdropTop.DrawRect(0, Color.clear, Theme.BgTop);
+            _root.AddChild(_backdropTop);
+
+            _backdropBottom = new GGraph();
+            _backdropBottom.SetPosition(0, _root.height * 0.4f);
+            _backdropBottom.SetSize(_root.width, _root.height * 0.6f);
+            _backdropBottom.DrawRect(0, Color.clear, Theme.BgBottom);
+            _root.AddChild(_backdropBottom);
+
+            _host = new GComponent();
+            _host.SetSize(_root.width, _root.height);
+            _root.AddChild(_host);
+        }
+
+        private void OnRootResize()
+        {
+            float w = GRoot.inst.width, h = GRoot.inst.height;
+            _root.SetSize(w, h);
+            _backdropTop.SetSize(w, h * 0.4f);
+            _backdropBottom.SetPosition(0, h * 0.4f);
+            _backdropBottom.SetSize(w, h * 0.6f);
+            _host.SetSize(w, h);
+            Router?.OnRootResize();
         }
 
         private void EnsureSceneRig()
