@@ -19,7 +19,7 @@ namespace MmorpgClient.World
             Object.Destroy(ring.GetComponent<Collider>());
             ring.name = "CastRing";
             ring.transform.SetParent(caster.transform, false);
-            ring.transform.localPosition = Vector3.zero;
+            ring.transform.localPosition = UnityEngine.Vector3.zero;
             var r = ring.GetComponent<Renderer>();
             r.material = new Material(Shader.Find("Sprites/Default")) { color = new Color(1f, 0.95f, 0.3f, 0.5f) };
             var driver = ring.AddComponent<RingDriver>();
@@ -35,7 +35,7 @@ namespace MmorpgClient.World
             target.AddComponent<Flasher>().Init(rend, color, ttl);
         }
 
-        public static void PlayBeam(Vector3 from, Vector3 to, Color color, float ttl = 0.3f)
+        public static void PlayBeam(UnityEngine.Vector3 from, UnityEngine.Vector3 to, Color color, float ttl = 0.3f)
         {
             var go = new GameObject("Beam");
             var lr = go.AddComponent<LineRenderer>();
@@ -56,7 +56,7 @@ namespace MmorpgClient.World
             {
                 _t += Time.deltaTime;
                 float k = Mathf.Clamp01(_t / ttl);
-                transform.localScale = Vector3.one * Mathf.Lerp(0.2f, maxRadius, k);
+                transform.localScale = UnityEngine.Vector3.one * Mathf.Lerp(0.2f, maxRadius, k);
                 var r = GetComponent<Renderer>();
                 if (r != null)
                 {

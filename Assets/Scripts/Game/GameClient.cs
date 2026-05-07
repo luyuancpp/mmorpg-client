@@ -264,6 +264,8 @@ namespace MmorpgClient.Game
             => s == null ? UnityEngine.Vector3.zero : new((float)s.Y, (float)s.Z, (float)s.X);
         private static UnityEngine.Vector3 FromServerVelocity(Velocity s)
             => s == null ? UnityEngine.Vector3.zero : new((float)s.Y, (float)s.Z, (float)s.X);
+        private static UnityEngine.Vector3 FromServerTransformVector(global::Vector3 s)
+            => s == null ? UnityEngine.Vector3.zero : new((float)s.Y, (float)s.Z, (float)s.X);
         private static ulong NowUnixMs()
             => (ulong)System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -426,7 +428,7 @@ namespace MmorpgClient.Game
             OnNotify(MessageIds.NotifyTeleport, mc =>
             {
                 var ev = TeleportS2C.Parser.ParseFrom(mc.SerializedMessage);
-                var pos = FromServerLocation(ev.Transform?.Location);
+                var pos = FromServerTransformVector(ev.Transform?.Location);
                 var euler = FromServerRotation(ev.Transform?.Rotation);
                 World.Teleport(ev.Entity, pos, euler);
                 Log($"[move] teleport entity={ev.Entity} reason={ev.Reason} input_seq<={ev.InputSeq}");
@@ -440,7 +442,7 @@ namespace MmorpgClient.Game
                 if (World.LocalEntity != 0)
                 {
                     var pos = FromServerLocation(ev.ServerLocation);
-                    if (Vector3.Distance(pos, GetActorPos(World.LocalEntity)) > 1.5f)
+                    if (UnityEngine.Vector3.Distance(pos, GetActorPos(World.LocalEntity)) > 1.5f)
                     {
                         World.Teleport(World.LocalEntity, pos, GetActorEuler(World.LocalEntity));
                         Log($"[move] reconcile snap input_seq={ev.InputSeq}");
@@ -492,7 +494,7 @@ namespace MmorpgClient.Game
 
         private void ApplyServerMove(ActorMoveS2C ev)
         {
-            var pos      = FromServerLocation(ev.Transform?.Location);
+            var pos = FromServerTransformVector(ev.Transform?.Location);
             var euler    = FromServerRotation(ev.Transform?.Rotation);
             var velocity = FromServerVelocity(ev.Velocity);
             World.ApplyMove(ev.Entity, pos, euler, velocity);

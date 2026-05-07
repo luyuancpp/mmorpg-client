@@ -55,7 +55,7 @@ namespace MmorpgClient.UI
         // movement client state
         private bool    _moveActive;
         private float   _lastMoveSyncAt;
-        private Vector3 _lastSentDir;
+        private UnityEngine.Vector3 _lastSentDir;
 
         // reconnect state
         private bool  _wasInGame;
@@ -97,9 +97,9 @@ namespace MmorpgClient.UI
 
                 // Simple chase: 6m back, 5m up, look at player.
                 var t = me.Go.transform;
-                var desired = t.position + new Vector3(0, 5f, -6f);
-                _camera.transform.position = Vector3.Lerp(_camera.transform.position, desired, 0.1f);
-                _camera.transform.LookAt(t.position + Vector3.up);
+                var desired = t.position + new UnityEngine.Vector3(0, 5f, -6f);
+                _camera.transform.position = UnityEngine.Vector3.Lerp(_camera.transform.position, desired, 0.1f);
+                _camera.transform.LookAt(t.position + UnityEngine.Vector3.up);
             }
         }
 
@@ -111,11 +111,11 @@ namespace MmorpgClient.UI
         /// The server is authoritative; <c>NotifyActorMove</c> for the local
         /// entity will reconcile via <see cref="ActorWorld.ApplyMove"/>.
         /// </summary>
-        private void DriveLocalMovement(Transform t)
+        private void DriveLocalMovement(UnityEngine.Transform t)
         {
             float h = Input.GetAxisRaw("Horizontal"); // A/D
             float v = Input.GetAxisRaw("Vertical");   // W/S
-            var dir = new Vector3(h, 0f, v);
+            var dir = new UnityEngine.Vector3(h, 0f, v);
             bool moving = dir.sqrMagnitude > 0.01f;
             if (moving) dir = dir.normalized;
 
@@ -124,12 +124,12 @@ namespace MmorpgClient.UI
             if (moving)
             {
                 t.position += dir * MoveSpeed * Time.deltaTime;
-                var targetYaw = Quaternion.LookRotation(dir, Vector3.up);
+                var targetYaw = Quaternion.LookRotation(dir, UnityEngine.Vector3.up);
                 t.rotation = Quaternion.RotateTowards(t.rotation, targetYaw, TurnSpeed * Time.deltaTime);
             }
 
             float now = Time.realtimeSinceStartup;
-            bool dirChanged = moving && Vector3.Angle(dir, _lastSentDir) > 15f;
+            bool dirChanged = moving && UnityEngine.Vector3.Angle(dir, _lastSentDir) > 15f;
 
             if (moving && (!_moveActive || dirChanged))
             {
@@ -147,7 +147,7 @@ namespace MmorpgClient.UI
             {
                 _client.SendMoveStop(t.position, t.eulerAngles);
                 _moveActive = false;
-                _lastSentDir = Vector3.zero;
+                _lastSentDir = UnityEngine.Vector3.zero;
             }
         }
 
@@ -257,7 +257,7 @@ namespace MmorpgClient.UI
                 var camGo = new GameObject("[DemoCamera]");
                 _camera = camGo.AddComponent<Camera>();
                 camGo.tag = "MainCamera";
-                camGo.transform.position = new Vector3(0, 8f, -10f);
+                camGo.transform.position = new UnityEngine.Vector3(0, 8f, -10f);
                 camGo.transform.rotation = Quaternion.Euler(35f, 0f, 0f);
             }
             if (FindObjectOfType<Light>() == null)
@@ -273,7 +273,7 @@ namespace MmorpgClient.UI
             {
                 var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
                 ground.name = "[DemoGround]";
-                ground.transform.localScale = new Vector3(20f, 1f, 20f);
+                ground.transform.localScale = new UnityEngine.Vector3(20f, 1f, 20f);
                 var rend = ground.GetComponent<Renderer>();
                 if (rend != null) rend.material.color = new Color(0.25f, 0.3f, 0.25f);
             }

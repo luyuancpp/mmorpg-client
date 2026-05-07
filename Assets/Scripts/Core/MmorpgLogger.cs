@@ -52,7 +52,7 @@ namespace MmorpgClient.Core
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[MmorpgLogger] file sink disabled: {ex.Message}");
+                UnityEngine.Debug.LogWarning($"[MmorpgLogger] file sink disabled: {ex.Message}");
             }
         }
 
