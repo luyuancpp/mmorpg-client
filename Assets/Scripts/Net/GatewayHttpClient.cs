@@ -26,6 +26,10 @@ namespace MmorpgClient.Net
         public uint zone_id;
         public string name;
         public string status;
+        public string load_level;
+        public string maintenance_msg;
+        public long open_time;
+        public bool is_new;
         public bool recommended;
     }
 
@@ -39,6 +43,23 @@ namespace MmorpgClient.Net
     public class AssignGateRequest
     {
         public uint zone_id;
+    }
+
+    [Serializable]
+    public class AnnouncementItem
+    {
+        public long id;
+        public string title;
+        public string content;
+        public string type;
+        public long start_time;
+        public long end_time;
+    }
+
+    [Serializable]
+    public class AnnouncementResponse
+    {
+        public AnnouncementItem[] items;
     }
 
     /// <summary>
@@ -66,6 +87,25 @@ namespace MmorpgClient.Net
                 onSuccess(parsed);
             }
             catch (Exception ex) { onError($"parse server-list: {ex.Message}"); }
+        }
+
+        public IEnumerator GetAnnouncements(Action<AnnouncementResponse> onSuccess, Action<string> onError)
+        {
+            using var req = UnityWebRequest.Get(_baseUrl + "/api/announcement");
+            req.timeout = 5;
+            yield return req.SendWebRequest();
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                onError($"GET /api/announcement failed: {req.error}");
+                yield break;
+            }
+
+            try
+            {
+                var parsed = JsonUtility.FromJson<AnnouncementResponse>(req.downloadHandler.text);
+                onSuccess(parsed);
+            }
+            catch (Exception ex) { onError($"parse announcement: {ex.Message}"); }
         }
 
         public IEnumerator AssignGate(uint zoneId, Action<AssignGateResult> onSuccess, Action<string> onError)
