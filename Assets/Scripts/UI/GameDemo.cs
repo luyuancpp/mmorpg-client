@@ -144,7 +144,6 @@ namespace MmorpgClient.UI
         private void Awake()
         {
             EnsureSceneRig();
-            EnsureGuiStyles();
             EnsurePreviewActor();
             ApplyPreviewRoleVisual();
 
