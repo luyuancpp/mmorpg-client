@@ -10,18 +10,21 @@ namespace MmorpgClient.UI
     /// </summary>
     public static class Theme
     {
-        public static readonly Color BgTop    = new Color(0.05f, 0.07f, 0.10f);
-        public static readonly Color BgBottom = new Color(0.20f, 0.16f, 0.10f);
-        public static readonly Color Panel    = new Color(0.07f, 0.09f, 0.12f, 0.94f);
-        public static readonly Color PanelEdge= new Color(0.78f, 0.62f, 0.31f, 0.85f);
-        public static readonly Color TextPrim = new Color(0.96f, 0.94f, 0.86f);
-        public static readonly Color TextDim  = new Color(0.74f, 0.78f, 0.74f);
-        public static readonly Color TextWarn = new Color(0.95f, 0.55f, 0.40f);
-        public static readonly Color BtnPrim  = new Color(0.20f, 0.55f, 0.42f);
-        public static readonly Color BtnGhost = new Color(0.16f, 0.18f, 0.22f, 0.92f);
-        public static readonly Color ZoneIdle = new Color(0.13f, 0.15f, 0.19f, 0.92f);
-        public static readonly Color ZoneSel  = new Color(0.22f, 0.36f, 0.30f, 0.98f);
-        public static readonly Color Accent   = new Color(0.95f, 0.78f, 0.36f);
+        public static readonly Color BgTop       = new Color(0.17f, 0.31f, 0.28f);
+        public static readonly Color BgBottom    = new Color(0.85f, 0.79f, 0.66f);
+        public static readonly Color Panel       = new Color(0.17f, 0.24f, 0.20f, 0.90f);
+        public static readonly Color PanelEdge   = new Color(0.90f, 0.82f, 0.62f, 0.92f);
+        public static readonly Color PanelInner  = new Color(0.11f, 0.16f, 0.14f, 0.86f);
+        public static readonly Color TextPrim    = new Color(0.97f, 0.93f, 0.83f);
+        public static readonly Color TextDim     = new Color(0.72f, 0.79f, 0.72f);
+        public static readonly Color TextWarn    = new Color(0.96f, 0.50f, 0.42f);
+        public static readonly Color BtnPrim     = new Color(0.27f, 0.63f, 0.47f);
+        public static readonly Color BtnPrimLine = new Color(0.88f, 0.95f, 0.89f, 0.56f);
+        public static readonly Color BtnGhost    = new Color(0.22f, 0.30f, 0.27f, 0.92f);
+        public static readonly Color ZoneIdle    = new Color(0.19f, 0.24f, 0.25f, 0.95f);
+        public static readonly Color ZoneSel     = new Color(0.30f, 0.44f, 0.38f, 0.98f);
+        public static readonly Color Accent      = new Color(0.95f, 0.82f, 0.52f);
+        public static readonly Color AccentSoft  = new Color(0.93f, 0.88f, 0.72f, 0.34f);
 
         // ── Builders (placeholder skin until .fui packages are authored) ──
 
@@ -32,9 +35,24 @@ namespace MmorpgClient.UI
             c.SetSize(w, h);
             c.opaque = true;
 
+            var shadow = new GGraph();
+            shadow.SetXY(6, 7);
+            shadow.DrawRect(w, h, 0, Color.clear, new Color(0.02f, 0.03f, 0.03f, 0.36f));
+            c.AddChild(shadow);
+
             var bg = new GGraph();
             bg.DrawRect(w, h, 1, PanelEdge, Panel);
             c.AddChild(bg);
+
+            var inner = new GGraph();
+            inner.SetXY(6, 6);
+            inner.DrawRect(w - 12, h - 12, 1, new Color(1f, 1f, 1f, 0.08f), PanelInner);
+            c.AddChild(inner);
+
+            var titleBar = new GGraph();
+            titleBar.SetXY(16, 12);
+            titleBar.DrawRect(w - 32, 16, 0, Color.clear, AccentSoft);
+            c.AddChild(titleBar);
             return c;
         }
 
@@ -42,7 +60,7 @@ namespace MmorpgClient.UI
         {
             var t = new GTextField();
             t.text = text;
-            t.textFormat = new TextFormat { color = Accent, size = 28, bold = true, align = AlignType.Left };
+            t.textFormat = new TextFormat { color = Accent, size = 30, bold = true, align = AlignType.Left };
             t.autoSize = AutoSizeType.Both;
             return t;
         }
@@ -51,7 +69,7 @@ namespace MmorpgClient.UI
         {
             var t = new GTextField();
             t.text = text;
-            t.textFormat = new TextFormat { color = TextPrim, size = 18, bold = true, align = AlignType.Left };
+            t.textFormat = new TextFormat { color = TextPrim, size = 19, bold = true, align = AlignType.Left };
             t.autoSize = AutoSizeType.Both;
             return t;
         }
@@ -63,7 +81,7 @@ namespace MmorpgClient.UI
             t.textFormat = new TextFormat
             {
                 color = dim ? TextDim : TextPrim,
-                size  = 13,
+                size  = 14,
                 align = AlignType.Left,
             };
             t.autoSize = AutoSizeType.Both;
@@ -79,23 +97,28 @@ namespace MmorpgClient.UI
             btn.opaque = true;
 
             var bg = new GGraph();
-            bg.DrawRect(w, h, 0, Color.clear, baseCol);
+            bg.DrawRect(w, h, 1, BtnPrimLine, baseCol);
             btn.AddChild(bg);
+
+            var shine = new GGraph();
+            shine.SetXY(2, 2);
+            shine.DrawRect(w - 4, Mathf.Max(8, h * 0.44f), 0, Color.clear, new Color(1f, 1f, 1f, 0.08f));
+            btn.AddChild(shine);
 
             var label = new GTextField();
             label.SetSize(w, h);
             label.text = text;
             label.textFormat = new TextFormat
             {
-                color = textCol, size = 14, bold = true,
+                color = textCol, size = 15, bold = true,
                 align = AlignType.Center,
             };
             label.verticalAlign = VertAlignType.Middle;
             btn.AddChild(label);
 
             var hover = new Color(Mathf.Min(1, baseCol.r * 1.18f), Mathf.Min(1, baseCol.g * 1.18f), Mathf.Min(1, baseCol.b * 1.18f), baseCol.a);
-            btn.onRollOver.Add(() => bg.DrawRect(w, h, 0, Color.clear, hover));
-            btn.onRollOut.Add(() => bg.DrawRect(w, h, 0, Color.clear, baseCol));
+            btn.onRollOver.Add(() => bg.DrawRect(w, h, 1, BtnPrimLine, hover));
+            btn.onRollOut.Add(() => bg.DrawRect(w, h, 1, BtnPrimLine, baseCol));
             btn.onClick.Add(_ => onClick?.Invoke());
             return btn;
         }
@@ -109,22 +132,22 @@ namespace MmorpgClient.UI
         public static (GComponent row, GTextInput field) LabeledInput(string label, string value, float rowW, bool isPassword = false)
         {
             var row = new GComponent();
-            row.SetSize(rowW, 28);
+            row.SetSize(rowW, 34);
 
             var l = new GTextField();
-            l.SetXY(0, 4);
+            l.SetXY(0, 7);
             l.SetSize(110, 24);
-            l.text = label;
-            l.textFormat = new TextFormat { color = TextDim, size = 13, align = AlignType.Left };
+            l.text = "「" + label + "」";
+            l.textFormat = new TextFormat { color = TextDim, size = 13, align = AlignType.Left, bold = true };
             row.AddChild(l);
 
             var bg = new GGraph();
-            bg.SetXY(112, 0);
-            bg.DrawRect(rowW - 112, 28, 1, new Color(1, 1, 1, 0.18f), new Color(1, 1, 1, 0.06f));
+            bg.SetXY(112, 1);
+            bg.DrawRect(rowW - 112, 32, 1, new Color(1f, 1f, 1f, 0.24f), new Color(0.06f, 0.10f, 0.09f, 0.50f));
             row.AddChild(bg);
 
             var input = new GTextInput();
-            input.SetXY(120, 2);
+            input.SetXY(120, 5);
             input.SetSize(rowW - 132, 24);
             input.text = value;
             input.displayAsPassword = isPassword;

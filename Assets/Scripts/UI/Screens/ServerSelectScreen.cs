@@ -24,36 +24,36 @@ namespace MmorpgClient.UI.Screens
             var root = new GComponent();
             root.SetSize(GRoot.inst.width, GRoot.inst.height);
 
-            const float CW = 720, CH = 560;
+            const float CW = 760, CH = 590;
             _card = Theme.Card(CW, CH);
             _card.SetXY((root.width - CW) * 0.5f, (root.height - CH) * 0.5f);
             _card.AddRelation(root, RelationType.Center_Center);
             root.AddChild(_card);
 
-            float x = 22, y = 18;
-            var h1 = Theme.H1("选择服务器"); h1.SetXY(x, y); _card.AddChild(h1); y += 38;
-            var sub = Theme.P("由 Java Gateway 实时下发的区服列表"); sub.SetXY(x, y); _card.AddChild(sub); y += 28;
+            float x = 26, y = 20;
+            var h1 = Theme.H1("道场择域"); h1.SetXY(x, y); _card.AddChild(h1); y += 44;
+            var sub = Theme.P("请择一处灵脉安身，开启你的 Q 版修行", dim: false); sub.SetXY(x, y); _card.AddChild(sub); y += 30;
 
             _zoneList = new GComponent();
             _zoneList.SetXY(x, y);
-            _zoneList.SetSize(CW - x * 2, 360);
+            _zoneList.SetSize(CW - x * 2, 390);
             _card.AddChild(_zoneList);
-            y += 370;
+            y += 402;
 
             _statusLabel = Theme.P(""); _statusLabel.SetXY(x, y); _card.AddChild(_statusLabel); y += 24;
 
-            _confirmBtn = Theme.PrimaryButton("确认进入选角", OnConfirm, 150);
+            _confirmBtn = Theme.PrimaryButton("前往选角", OnConfirm, 150, 40);
             _confirmBtn.SetXY(x, y);
             _confirmBtn.touchable = false;
             _confirmBtn.alpha = 0.5f;
             _card.AddChild(_confirmBtn);
 
-            var refreshBtn = Theme.GhostButton("刷新列表", () => _app.Run(LoadZones()));
+            var refreshBtn = Theme.GhostButton("重查灵域", () => _app.Run(LoadZones()), 120, 40);
             refreshBtn.SetXY(x + 160, y);
             _card.AddChild(refreshBtn);
 
-            var backBtn = Theme.GhostButton("返回", () => _app.Router.Show<LoginScreen>());
-            backBtn.SetXY(x + 280, y);
+            var backBtn = Theme.GhostButton("返山门", () => _app.Router.Show<LoginScreen>(), 110, 40);
+            backBtn.SetXY(x + 292, y);
             _card.AddChild(backBtn);
 
             return root;
@@ -77,7 +77,7 @@ namespace MmorpgClient.UI.Screens
         private IEnumerator LoadZones()
         {
             _loading = true;
-            _statusLabel.text = "正在拉取区服列表...";
+            _statusLabel.text = "正在观测灵域波动...";
             yield return _app.Gateway.GetServerList(
                 resp =>
                 {
@@ -88,14 +88,14 @@ namespace MmorpgClient.UI.Screens
                     Rebuild();
                     _statusLabel.text = $"共 {_app.Session.Zones.Count} 个区服";
                 },
-                err => _statusLabel.text = "区服拉取失败: " + err);
+                err => _statusLabel.text = "灵域观测失败: " + err);
             _loading = false;
         }
 
         private void Rebuild()
         {
             _zoneList.RemoveChildren(0, -1, true);
-            float rowH = 56, gap = 6, w = _zoneList.width;
+            float rowH = 62, gap = 8, w = _zoneList.width;
             for (int i = 0; i < _app.Session.Zones.Count; i++)
             {
                 var z = _app.Session.Zones[i];
@@ -110,14 +110,14 @@ namespace MmorpgClient.UI.Screens
                 row.SetXY(0, i * (rowH + gap));
 
                 var name = new GTextField();
-                name.SetXY(12, 6);
+                name.SetXY(14, 8);
                 name.SetSize(w - 200, 24);
                 name.text = $"#{z.zone_id}  {z.name}";
                 name.textFormat = new TextFormat { color = Theme.TextPrim, size = 16, bold = true, align = AlignType.Left };
                 row.AddChild(name);
 
                 var status = new GTextField();
-                status.SetXY(12, 30);
+                status.SetXY(14, 34);
                 status.SetSize(w - 200, 20);
                 status.text = StatusText(z);
                 status.textFormat = new TextFormat { color = StatusColor(z), size = 12 };

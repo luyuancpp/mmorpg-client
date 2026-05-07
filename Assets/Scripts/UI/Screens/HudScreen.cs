@@ -25,20 +25,20 @@ namespace MmorpgClient.UI.Screens
 
             // Top bar
             var top = new GComponent();
-            top.SetSize(root.width, 36);
+            top.SetSize(root.width, 42);
             top.AddRelation(root, RelationType.Width);
-            var topBg = new GGraph(); topBg.DrawRect(root.width, 36, 0, Color.clear, new Color(0, 0, 0, 0.55f)); topBg.AddRelation(root, RelationType.Width);
+            var topBg = new GGraph(); topBg.DrawRect(root.width, 42, 1, new Color(0.95f, 0.89f, 0.70f, 0.42f), new Color(0.07f, 0.12f, 0.11f, 0.70f)); topBg.AddRelation(root, RelationType.Width);
             top.AddChild(topBg);
 
             _topbarLabel = new GTextField();
-            _topbarLabel.SetXY(12, 8);
+            _topbarLabel.SetXY(14, 10);
             _topbarLabel.SetSize(root.width - 120, 24);
             _topbarLabel.textFormat = new TextFormat { color = Theme.TextPrim, size = 14, align = AlignType.Left };
             _topbarLabel.AddRelation(root, RelationType.Width);
             top.AddChild(_topbarLabel);
 
-            var logoutBtn = Theme.GhostButton("登出", () => _app.Router.Show<LoginScreen>(), 80, 28);
-            logoutBtn.SetXY(root.width - 92, 4);
+            var logoutBtn = Theme.GhostButton("回山门", () => _app.Router.Show<LoginScreen>(), 88, 30);
+            logoutBtn.SetXY(root.width - 100, 6);
             logoutBtn.AddRelation(root, RelationType.Right_Right);
             top.AddChild(logoutBtn);
             root.AddChild(top);
@@ -48,7 +48,7 @@ namespace MmorpgClient.UI.Screens
             _logPanel.SetSize(360, 160);
             _logPanel.SetXY(16, root.height - 176);
             _logPanel.AddRelation(root, RelationType.Bottom_Bottom);
-            var lbg = new GGraph(); lbg.DrawRect(360, 160, 0, Color.clear, new Color(0, 0, 0, 0.55f));
+            var lbg = new GGraph(); lbg.DrawRect(360, 160, 1, new Color(0.94f, 0.87f, 0.66f, 0.40f), new Color(0.08f, 0.12f, 0.12f, 0.72f));
             _logPanel.AddChild(lbg);
             _logText = new GTextField();
             _logText.SetXY(8, 6);
@@ -59,7 +59,7 @@ namespace MmorpgClient.UI.Screens
             root.AddChild(_logPanel);
 
             // Bottom-right skill button
-            var skill = Theme.PrimaryButton("释放技能", OnReleaseSkill, 150, 60);
+            var skill = Theme.PrimaryButton("御符小术", OnReleaseSkill, 158, 60);
             skill.SetXY(root.width - 166, root.height - 76);
             skill.AddRelation(root, RelationType.Right_Right);
             skill.AddRelation(root, RelationType.Bottom_Bottom);
@@ -85,8 +85,8 @@ namespace MmorpgClient.UI.Screens
         {
             var z = _app.Session.SelectedZone;
             string archetype = (_app.Session.RoleArchetypeIndex >= 0 && _app.Session.RoleArchetypeIndex < 3)
-                ? new[] { "游侠", "灵符师", "剑客" }[_app.Session.RoleArchetypeIndex] : "?";
-            _topbarLabel.text = $"{_app.Session.RoleNickname} ({archetype})  ·  区服: {(z != null ? z.name : "?")}  ·  PlayerId: {_app.GameClient.PlayerId}";
+                ? new[] { "云游小道", "灵符学徒", "青锋少侠" }[_app.Session.RoleArchetypeIndex] : "?";
+            _topbarLabel.text = $"{_app.Session.RoleNickname}（{archetype}）  ·  灵域: {(z != null ? z.name : "?")}  ·  仙籍: {_app.GameClient.PlayerId}";
         }
 
         private void AppendLog(string msg)

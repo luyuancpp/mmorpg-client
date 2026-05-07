@@ -84,13 +84,18 @@ namespace MmorpgClient.UI
 
             // backdrop layers
             _backdropTop = new GGraph();
-            _backdropTop.DrawRect(_root.width, _root.height * 0.4f, 0, Color.clear, Theme.BgTop);
+            _backdropTop.DrawRect(_root.width, _root.height * 0.52f, 0, Color.clear, Theme.BgTop);
             _root.AddChild(_backdropTop);
 
             _backdropBottom = new GGraph();
-            _backdropBottom.SetXY(0, _root.height * 0.4f);
-            _backdropBottom.DrawRect(_root.width, _root.height * 0.6f, 0, Color.clear, Theme.BgBottom);
+            _backdropBottom.SetXY(0, _root.height * 0.52f);
+            _backdropBottom.DrawRect(_root.width, _root.height * 0.48f, 0, Color.clear, Theme.BgBottom);
             _root.AddChild(_backdropBottom);
+
+            var moon = new GGraph();
+            moon.SetXY(_root.width - 210, 44);
+            moon.DrawEllipse(120, 120, new Color(1f, 0.97f, 0.84f, 0.32f));
+            _root.AddChild(moon);
 
             _host = new GComponent();
             _host.SetSize(_root.width, _root.height);
@@ -101,9 +106,9 @@ namespace MmorpgClient.UI
         {
             float w = GRoot.inst.width, h = GRoot.inst.height;
             _root.SetSize(w, h);
-            _backdropTop.DrawRect(w, h * 0.4f, 0, Color.clear, Theme.BgTop);
-            _backdropBottom.SetXY(0, h * 0.4f);
-            _backdropBottom.DrawRect(w, h * 0.6f, 0, Color.clear, Theme.BgBottom);
+            _backdropTop.DrawRect(w, h * 0.52f, 0, Color.clear, Theme.BgTop);
+            _backdropBottom.SetXY(0, h * 0.52f);
+            _backdropBottom.DrawRect(w, h * 0.48f, 0, Color.clear, Theme.BgBottom);
             _host.SetSize(w, h);
             Router?.OnRootResize();
         }
@@ -116,7 +121,7 @@ namespace MmorpgClient.UI
                 camGo.tag = "MainCamera";
                 var cam = camGo.AddComponent<Camera>();
                 cam.clearFlags = CameraClearFlags.SolidColor;
-                cam.backgroundColor = new Color(0.04f, 0.05f, 0.07f);
+                cam.backgroundColor = new Color(0.20f, 0.23f, 0.19f);
                 cam.transform.position = new UnityEngine.Vector3(0f, 4f, -10f);
                 cam.transform.rotation = Quaternion.Euler(15f, 0f, 0f);
                 camGo.AddComponent<AudioListener>();

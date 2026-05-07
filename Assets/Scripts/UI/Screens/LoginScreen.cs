@@ -22,58 +22,58 @@ namespace MmorpgClient.UI.Screens
             var root = new GComponent();
             root.SetSize(GRoot.inst.width, GRoot.inst.height);
 
-            const float CW = 720, CH = 600;
+            const float CW = 760, CH = 620;
             _card = Theme.Card(CW, CH);
             _card.SetXY((root.width - CW) * 0.5f, (root.height - CH) * 0.5f);
             _card.AddRelation(root, RelationType.Center_Center);
             root.AddChild(_card);
 
-            float x = 22, y = 18;
-            var h1 = Theme.H1("云岚纪行");
+            float x = 26, y = 20;
+            var h1 = Theme.H1("青云问道录");
             h1.SetXY(x, y);
             _card.AddChild(h1);
-            y += 38;
+            y += 44;
 
-            var sub = Theme.P("Mmorpg Client · 正式登录界面 (FairyGUI)");
+            var sub = Theme.P("Q版道门 · 轻松修行 · 温暖江湖", dim: false);
             sub.SetXY(x, y);
             _card.AddChild(sub);
-            y += 24;
+            y += 28;
 
-            var h2 = Theme.H2("江湖快讯");
+            var h2 = Theme.H2("道门告示");
             h2.SetXY(x, y);
             _card.AddChild(h2);
-            y += 28;
+            y += 34;
 
             // announcement list container with simple clipping
             _announceList = new GComponent();
             _announceList.SetXY(x, y);
-            _announceList.SetSize(CW - x * 2, 200);
+            _announceList.SetSize(CW - x * 2, 214);
             _announceList.opaque = false;
             _card.AddChild(_announceList);
-            y += 210;
+            y += 224;
 
-            var h3 = Theme.H2("账号");
+            var h3 = Theme.H2("入门凭证");
             h3.SetXY(x, y);
             _card.AddChild(h3);
-            y += 28;
+            y += 34;
 
             var (gwRow, gwField)  = Theme.LabeledInput("Gateway",  app.Session.GatewayBaseUrl, CW - x * 2);
             _gatewayField = gwField;
-            gwRow.SetXY(x, y); _card.AddChild(gwRow); y += 34;
+            gwRow.SetXY(x, y); _card.AddChild(gwRow); y += 38;
             var (acRow, acField)  = Theme.LabeledInput("Account",  app.Session.Account,        CW - x * 2);
             _accountField = acField;
-            acRow.SetXY(x, y); _card.AddChild(acRow); y += 34;
+            acRow.SetXY(x, y); _card.AddChild(acRow); y += 38;
             var (pwRow, pwField) = Theme.LabeledInput("Password", app.Session.Password,       CW - x * 2, isPassword: true);
             _passwordField = pwField;
-            pwRow.SetXY(x, y); _card.AddChild(pwRow); y += 40;
+            pwRow.SetXY(x, y); _card.AddChild(pwRow); y += 44;
 
-            var btnEnter   = Theme.PrimaryButton("进入选服", OnEnterServerSelect, 130);
+            var btnEnter   = Theme.PrimaryButton("踏入山门", OnEnterServerSelect, 140, 40);
             btnEnter.SetXY(x, y);
             _card.AddChild(btnEnter);
-            var btnRefresh = Theme.GhostButton("刷新公告", () => _app.Run(LoadAnnouncements()));
-            btnRefresh.SetXY(x + 140, y);
+            var btnRefresh = Theme.GhostButton("重读告示", () => _app.Run(LoadAnnouncements()), 124, 40);
+            btnRefresh.SetXY(x + 152, y);
             _card.AddChild(btnRefresh);
-            y += 42;
+            y += 48;
 
             _statusLabel = Theme.P("");
             _statusLabel.SetXY(x, y);
@@ -104,7 +104,7 @@ namespace MmorpgClient.UI.Screens
         private IEnumerator LoadAnnouncements()
         {
             _loading = true;
-            _statusLabel.text = "正在拉取公告...";
+            _statusLabel.text = "道童正在抄录告示...";
             yield return _app.Gateway.GetAnnouncements(
                 resp =>
                 {
@@ -115,7 +115,7 @@ namespace MmorpgClient.UI.Screens
                 },
                 err =>
                 {
-                    _statusLabel.text = "公告拉取失败: " + err;
+                    _statusLabel.text = "告示抄录失败: " + err;
                 });
             _loading = false;
         }
