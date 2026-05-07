@@ -41,7 +41,11 @@ namespace MmorpgClient.Core
             Application.targetFrameRate = 60;
         }
 
-        private void Update() => Client?.Tick();
+        private void Update()
+        {
+            Client?.Tick();
+            Client?.World?.Tick();
+        }
 
         private void OnApplicationQuit()
         {

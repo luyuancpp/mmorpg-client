@@ -195,6 +195,78 @@ namespace MmorpgClient.Game
             SendOneWay(MessageIds.ReleaseSkill, req);
         }
 
+        // ── Movement ─────────────────────────────────────────────
+        //
+        // Coordinate mapping: server uses UE-style (X=forward, Y=right, Z=up).
+        // Unity uses (X=right, Y=up, Z=forward). We mirror SpawnActorView's
+        // mapping so positions round-trip cleanly:
+        //     server.X <-> unity.Z
+        //     server.Y <-> unity.X
+        //     server.Z <-> unity.Y
+
+        private uint _moveInputSeq;
+        private bool _isMoving;
+
+        public uint NextInputSeq() => ++_moveInputSeq;
+        public bool IsMoving => _isMoving;
+
+        public void SendMoveStart(UnityEngine.Vector3 startPos, UnityEngine.Vector3 euler,
+                                  UnityEngine.Vector3 velocity, UnityEngine.Vector3? targetPos = null)
+        {
+            var req = new MoveStartC2S
+            {
+                StartLocation  = ToServerLocation(startPos),
+                Rotation       = ToServerRotation(euler),
+                Velocity       = ToServerVelocity(velocity),
+                TargetLocation = ToServerLocation(targetPos ?? UnityEngine.Vector3.zero),
+                ClientTimeMs   = NowUnixMs(),
+                InputSeq       = NextInputSeq(),
+            };
+            SendOneWay(MessageIds.MoveStart, req);
+            _isMoving = true;
+        }
+
+        public void SendMoveStop(UnityEngine.Vector3 endPos, UnityEngine.Vector3 euler)
+        {
+            var req = new MoveStopC2S
+            {
+                EndLocation  = ToServerLocation(endPos),
+                Rotation     = ToServerRotation(euler),
+                ClientTimeMs = NowUnixMs(),
+                InputSeq     = NextInputSeq(),
+            };
+            SendOneWay(MessageIds.MoveStop, req);
+            _isMoving = false;
+        }
+
+        public void SendMoveSync(UnityEngine.Vector3 pos, UnityEngine.Vector3 euler, UnityEngine.Vector3 velocity)
+        {
+            var req = new MoveSyncC2S
+            {
+                Location     = ToServerLocation(pos),
+                Rotation     = ToServerRotation(euler),
+                Velocity     = ToServerVelocity(velocity),
+                ClientTimeMs = NowUnixMs(),
+                InputSeq     = NextInputSeq(),
+            };
+            SendOneWay(MessageIds.MoveSync, req);
+        }
+
+        private static Location ToServerLocation(UnityEngine.Vector3 u)
+            => new() { X = u.z, Y = u.x, Z = u.y };
+        private static Rotation ToServerRotation(UnityEngine.Vector3 u)
+            => new() { X = u.z, Y = u.x, Z = u.y };
+        private static Velocity ToServerVelocity(UnityEngine.Vector3 u)
+            => new() { X = u.z, Y = u.x, Z = u.y };
+        private static UnityEngine.Vector3 FromServerLocation(Location s)
+            => s == null ? UnityEngine.Vector3.zero : new((float)s.Y, (float)s.Z, (float)s.X);
+        private static UnityEngine.Vector3 FromServerRotation(Rotation s)
+            => s == null ? UnityEngine.Vector3.zero : new((float)s.Y, (float)s.Z, (float)s.X);
+        private static UnityEngine.Vector3 FromServerVelocity(Velocity s)
+            => s == null ? UnityEngine.Vector3.zero : new((float)s.Y, (float)s.Z, (float)s.X);
+        private static ulong NowUnixMs()
+            => (ulong)System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
         // ── internals ────────────────────────────────────────────
 
         private void ConnectGate(string host, int port)
@@ -339,6 +411,43 @@ namespace MmorpgClient.Game
                 Log($"[skill] interrupted entity={ev.Entity} skill={ev.SkillTableId} reason={ev.ReasonCode}");
             });
 
+            OnNotify(MessageIds.NotifyActorMove, mc =>
+            {
+                var ev = ActorMoveS2C.Parser.ParseFrom(mc.SerializedMessage);
+                ApplyServerMove(ev);
+            });
+
+            OnNotify(MessageIds.NotifyActorMoveList, mc =>
+            {
+                var ev = ActorMoveListS2C.Parser.ParseFrom(mc.SerializedMessage);
+                foreach (var m in ev.Moves) ApplyServerMove(m);
+            });
+
+            OnNotify(MessageIds.NotifyTeleport, mc =>
+            {
+                var ev = TeleportS2C.Parser.ParseFrom(mc.SerializedMessage);
+                var pos = FromServerLocation(ev.Transform?.Location);
+                var euler = FromServerRotation(ev.Transform?.Rotation);
+                World.Teleport(ev.Entity, pos, euler);
+                Log($"[move] teleport entity={ev.Entity} reason={ev.Reason} input_seq<={ev.InputSeq}");
+            });
+
+            OnNotify(MessageIds.NotifyMoveAck, mc =>
+            {
+                var ev = MoveAckS2C.Parser.ParseFrom(mc.SerializedMessage);
+                // For now we just trust the server; a full client-prediction
+                // pipeline would rewind/replay any pending input > ev.InputSeq.
+                if (World.LocalEntity != 0)
+                {
+                    var pos = FromServerLocation(ev.ServerLocation);
+                    if (Vector3.Distance(pos, GetActorPos(World.LocalEntity)) > 1.5f)
+                    {
+                        World.Teleport(World.LocalEntity, pos, GetActorEuler(World.LocalEntity));
+                        Log($"[move] reconcile snap input_seq={ev.InputSeq}");
+                    }
+                }
+            });
+
             OnNotify(MessageIds.TipToClient, mc =>
             {
                 var tip = TipInfoMessage.Parser.ParseFrom(mc.SerializedMessage);
@@ -380,6 +489,22 @@ namespace MmorpgClient.Game
                 World.SetLocalPlayer(ev.Entity);
             }
         }
+
+        private void ApplyServerMove(ActorMoveS2C ev)
+        {
+            var pos      = FromServerLocation(ev.Transform?.Location);
+            var euler    = FromServerRotation(ev.Transform?.Rotation);
+            var velocity = FromServerVelocity(ev.Velocity);
+            World.ApplyMove(ev.Entity, pos, euler, velocity);
+        }
+
+        private UnityEngine.Vector3 GetActorPos(ulong entity)
+            => World.TryGetActor(entity, out var v) && v.Go != null
+                ? v.Go.transform.localPosition : UnityEngine.Vector3.zero;
+
+        private UnityEngine.Vector3 GetActorEuler(ulong entity)
+            => World.TryGetActor(entity, out var v) && v.Go != null
+                ? v.Go.transform.localEulerAngles : UnityEngine.Vector3.zero;
 
         private void MaybeRefreshToken()
         {

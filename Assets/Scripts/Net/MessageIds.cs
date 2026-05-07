@@ -14,17 +14,25 @@ namespace MmorpgClient.Net
         public const uint LeaveGame              =   17; // ClientPlayerLoginLeaveGame
         public const uint ListSkills             =   77; // SceneSkillClientPlayerListSkills
         public const uint Login                  =   48; // ClientPlayerLoginLogin
+        public const uint MoveStart              =  134; // SceneMovementClientPlayerMoveStart
+        public const uint MoveStop               =  131; // SceneMovementClientPlayerMoveStop
+        public const uint MoveSync               =  132; // SceneMovementClientPlayerMoveSync
         public const uint NotifyActorCreate      =   21; // SceneSceneClientPlayerNotifyActorCreate
         public const uint NotifyActorDestroy     =   51; // SceneSceneClientPlayerNotifyActorDestroy
         public const uint NotifyActorListCreate  =   47; // SceneSceneClientPlayerNotifyActorListCreate
         public const uint NotifyActorListDestroy =   64; // SceneSceneClientPlayerNotifyActorListDestroy
+        public const uint NotifyActorMove        =  133; // SceneMovementClientPlayerNotifyActorMove
+        public const uint NotifyActorMoveList    =  135; // SceneMovementClientPlayerNotifyActorMoveList
         public const uint NotifyEnterScene       =   79; // SceneSceneClientPlayerNotifyEnterScene
+        public const uint NotifyMoveAck          =  137; // SceneMovementClientPlayerNotifyMoveAck
         public const uint NotifySceneInfo        =   31; // SceneSceneClientPlayerNotifySceneInfo
         public const uint NotifySkillInterrupted =   33; // SceneSkillClientPlayerNotifySkillInterrupted
         public const uint NotifySkillUsed        =   70; // SceneSkillClientPlayerNotifySkillUsed
+        public const uint NotifyTeleport         =  130; // SceneMovementClientPlayerNotifyTeleport
         public const uint RefreshToken           =  127; // ClientPlayerLoginRefreshToken
         public const uint ReleaseSkill           =   84; // SceneSkillClientPlayerReleaseSkill
         public const uint SceneInfoC2S           =   43; // SceneSceneClientPlayerSceneInfoC2S
+        public const uint TeleportRequest        =  136; // SceneMovementClientPlayerTeleportRequest
         public const uint TipToClient            =   23; // SceneClientPlayerCommonSendTipToClient
     }
 }

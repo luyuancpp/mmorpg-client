@@ -15,6 +15,19 @@ namespace MmorpgClient.World
         public ulong ConfigId;
         public GameObject Go;
         public TextMesh Label;
+
+        // Interpolation state. We snap on first sample, then linearly
+        // interpolate from current transform toward _target* over
+        // InterpDuration seconds. Server send rate is sparse (start / stop /
+        // direction-change), so we extrapolate using _velocity in between.
+        public Vector3 TargetPos;
+        public Vector3 TargetEuler;
+        public Vector3 Velocity;     // m/s in Unity space
+        public float   InterpStart;  // realtimeSinceStartup
+        public float   InterpDuration;
+        public Vector3 InterpFromPos;
+        public Vector3 InterpFromEuler;
+        public bool    HasTarget;
     }
 
     public enum ActorKind { Unknown = 0, Player = 1, Npc = 2 }
@@ -96,6 +109,72 @@ namespace MmorpgClient.World
 
         public bool TryGetActor(ulong entity, out ActorView view)
             => _actors.TryGetValue(entity, out view);
+
+        /// <summary>
+        /// Apply a server <c>ActorMoveS2C</c>: snap target, start a short
+        /// interpolation from the current transform so movement looks smooth
+        /// even if the server's broadcast rate is sparse.
+        /// </summary>
+        public void ApplyMove(ulong entity, Vector3 targetPos, Vector3 targetEuler,
+                              Vector3 velocity, float interpDuration = 0.15f)
+        {
+            if (!_actors.TryGetValue(entity, out var v) || v.Go == null) return;
+            v.InterpFromPos   = v.Go.transform.localPosition;
+            v.InterpFromEuler = v.Go.transform.localEulerAngles;
+            v.TargetPos       = targetPos;
+            v.TargetEuler     = targetEuler;
+            v.Velocity        = velocity;
+            v.InterpStart     = Time.realtimeSinceStartup;
+            v.InterpDuration  = Mathf.Max(0.001f, interpDuration);
+            v.HasTarget       = true;
+        }
+
+        /// <summary>
+        /// Server forced snap (teleport / anti-cheat correction). Skips
+        /// interpolation entirely.
+        /// </summary>
+        public void Teleport(ulong entity, Vector3 pos, Vector3 euler)
+        {
+            if (!_actors.TryGetValue(entity, out var v) || v.Go == null) return;
+            v.Go.transform.localPosition    = pos;
+            v.Go.transform.localEulerAngles = euler;
+            v.TargetPos = pos;
+            v.TargetEuler = euler;
+            v.Velocity = Vector3.zero;
+            v.HasTarget = false;
+        }
+
+        /// <summary>
+        /// Drive interpolation + extrapolation. Call from a MonoBehaviour
+        /// Update once per frame. Frame-rate independent.
+        /// </summary>
+        public void Tick()
+        {
+            float now = Time.realtimeSinceStartup;
+            float dt  = Time.deltaTime;
+            foreach (var v in _actors.Values)
+            {
+                if (!v.HasTarget || v.Go == null) continue;
+                float t = (now - v.InterpStart) / v.InterpDuration;
+                if (t < 1f)
+                {
+                    v.Go.transform.localPosition    = Vector3.Lerp(v.InterpFromPos, v.TargetPos, t);
+                    v.Go.transform.localEulerAngles = LerpEuler(v.InterpFromEuler, v.TargetEuler, t);
+                }
+                else
+                {
+                    // Past the interp window: dead-reckon with last velocity.
+                    v.TargetPos += v.Velocity * dt;
+                    v.Go.transform.localPosition    = v.TargetPos;
+                    v.Go.transform.localEulerAngles = v.TargetEuler;
+                }
+            }
+        }
+
+        private static Vector3 LerpEuler(Vector3 a, Vector3 b, float t)
+            => new(Mathf.LerpAngle(a.x, b.x, t),
+                   Mathf.LerpAngle(a.y, b.y, t),
+                   Mathf.LerpAngle(a.z, b.z, t));
 
         private void Recolor(ActorView v)
         {

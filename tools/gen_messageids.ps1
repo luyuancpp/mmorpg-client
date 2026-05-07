@@ -40,6 +40,11 @@ $whitelist = @{
     "SceneSkillClientPlayerReleaseSkill"           = "ReleaseSkill"
     "SceneSkillClientPlayerListSkills"             = "ListSkills"
 
+    "SceneMovementClientPlayerMoveStart"           = "MoveStart"
+    "SceneMovementClientPlayerMoveStop"            = "MoveStop"
+    "SceneMovementClientPlayerMoveSync"            = "MoveSync"
+    "SceneMovementClientPlayerTeleportRequest"     = "TeleportRequest"
+
     "SceneSceneClientPlayerNotifyEnterScene"       = "NotifyEnterScene"
     "SceneSceneClientPlayerNotifySceneInfo"        = "NotifySceneInfo"
     "SceneSceneClientPlayerNotifyActorCreate"      = "NotifyActorCreate"
@@ -50,6 +55,11 @@ $whitelist = @{
     "SceneSkillClientPlayerNotifySkillInterrupted" = "NotifySkillInterrupted"
     "SceneClientPlayerCommonSendTipToClient"       = "TipToClient"
     "SceneClientPlayerCommonKickPlayer"            = "KickPlayer"
+
+    "SceneMovementClientPlayerNotifyMoveAck"       = "NotifyMoveAck"
+    "SceneMovementClientPlayerNotifyActorMove"     = "NotifyActorMove"
+    "SceneMovementClientPlayerNotifyActorMoveList" = "NotifyActorMoveList"
+    "SceneMovementClientPlayerNotifyTeleport"      = "NotifyTeleport"
 }
 
 $idByMethod = @{}

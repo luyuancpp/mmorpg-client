@@ -40,11 +40,22 @@ namespace MmorpgClient.UI
         public float ReconnectMaxDelay   = 30f;
         public int   ReconnectMaxAttempts = 10;
 
+        [Header("Movement")]
+        public bool  EnableWasdMove   = true;
+        public float MoveSpeed        = 4.5f;     // units/sec (Unity world)
+        public float TurnSpeed        = 180f;     // deg/sec
+        public float MoveSyncInterval = 0.25f;    // 4Hz drift heartbeat
+
         private GameClient _client;
         private readonly List<string> _log = new();
         private string _status = "idle";
         private Vector2 _scroll;
         private Camera _camera;
+
+        // movement client state
+        private bool    _moveActive;
+        private float   _lastMoveSyncAt;
+        private Vector3 _lastSentDir;
 
         // reconnect state
         private bool  _wasInGame;
@@ -76,14 +87,67 @@ namespace MmorpgClient.UI
             if (_client.InGame) _wasInGame = true;
             MaybeReconnect();
 
+            // World interpolation (drives non-local actors based on server moves).
+            _client.World?.Tick();
+
             if (_camera != null && _client.World != null && _client.World.LocalEntity != 0
                 && _client.World.TryGetActor(_client.World.LocalEntity, out var me))
             {
+                if (EnableWasdMove && _client.InGame) DriveLocalMovement(me.Go.transform);
+
                 // Simple chase: 6m back, 5m up, look at player.
                 var t = me.Go.transform;
                 var desired = t.position + new Vector3(0, 5f, -6f);
                 _camera.transform.position = Vector3.Lerp(_camera.transform.position, desired, 0.1f);
                 _camera.transform.LookAt(t.position + Vector3.up);
+            }
+        }
+
+        /// <summary>
+        /// WASD planar movement on the local-player cube. Sends:
+        /// - MoveStart on input start / direction change,
+        /// - MoveSync at <see cref="MoveSyncInterval"/> while moving (drift heartbeat),
+        /// - MoveStop on key release.
+        /// The server is authoritative; <c>NotifyActorMove</c> for the local
+        /// entity will reconcile via <see cref="ActorWorld.ApplyMove"/>.
+        /// </summary>
+        private void DriveLocalMovement(Transform t)
+        {
+            float h = Input.GetAxisRaw("Horizontal"); // A/D
+            float v = Input.GetAxisRaw("Vertical");   // W/S
+            var dir = new Vector3(h, 0f, v);
+            bool moving = dir.sqrMagnitude > 0.01f;
+            if (moving) dir = dir.normalized;
+
+            // Local prediction (we own this primitive's transform until the
+            // server reconciles via NotifyMoveAck / NotifyActorMove).
+            if (moving)
+            {
+                t.position += dir * MoveSpeed * Time.deltaTime;
+                var targetYaw = Quaternion.LookRotation(dir, Vector3.up);
+                t.rotation = Quaternion.RotateTowards(t.rotation, targetYaw, TurnSpeed * Time.deltaTime);
+            }
+
+            float now = Time.realtimeSinceStartup;
+            bool dirChanged = moving && Vector3.Angle(dir, _lastSentDir) > 15f;
+
+            if (moving && (!_moveActive || dirChanged))
+            {
+                _client.SendMoveStart(t.position, t.eulerAngles, dir * MoveSpeed);
+                _moveActive     = true;
+                _lastSentDir    = dir;
+                _lastMoveSyncAt = now;
+            }
+            else if (moving && now - _lastMoveSyncAt >= MoveSyncInterval)
+            {
+                _client.SendMoveSync(t.position, t.eulerAngles, dir * MoveSpeed);
+                _lastMoveSyncAt = now;
+            }
+            else if (!moving && _moveActive)
+            {
+                _client.SendMoveStop(t.position, t.eulerAngles);
+                _moveActive = false;
+                _lastSentDir = Vector3.zero;
             }
         }
 

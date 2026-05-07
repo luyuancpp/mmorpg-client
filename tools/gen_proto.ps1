@@ -49,6 +49,7 @@ $files = @(
     "proto/scene/scene_info.proto",
     "proto/scene/player_scene.proto",
     "proto/scene/player_skill.proto",
+    "proto/scene/player_movement.proto",
     "proto/scene/player_lifecycle.proto",
     "proto/scene/client_player_common.proto"
 )
