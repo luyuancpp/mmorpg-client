@@ -1,0 +1,79 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ── Unity build ──────────────────────────────────────────────
+  # Requires three repository secrets to actually run a build:
+  #   UNITY_LICENSE  -- contents of your .ulf personal license, or a
+  #                     Unity Pro serial via UNITY_SERIAL/UNITY_EMAIL/UNITY_PASSWORD
+  #   UNITY_EMAIL
+  #   UNITY_PASSWORD
+  # Without them this job is skipped automatically.
+  unity-build:
+    name: Unity ${{ matrix.targetPlatform }} build
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        unityVersion: [6000.0.32f1]
+        targetPlatform: [StandaloneWindows64, WebGL, Android]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # Cache Library/ to make incremental builds faster.
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ matrix.targetPlatform }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-${{ matrix.targetPlatform }}-
+            Library-
+
+      - name: Test
+        if: env.UNITY_LICENSE != ''
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE:  ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL:    ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: ${{ matrix.unityVersion }}
+          githubToken:  ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        if: env.UNITY_LICENSE != ''
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE:  ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL:    ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion:   ${{ matrix.unityVersion }}
+          targetPlatform: ${{ matrix.targetPlatform }}
+
+      - name: Upload artifact
+        if: env.UNITY_LICENSE != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.targetPlatform }}
+          path: build
+
+  # ── Lightweight script lint (always runs) ────────────────────
+  scripts-lint:
+    name: PSScriptAnalyzer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - shell: pwsh
+        run: |
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+          Invoke-ScriptAnalyzer -Path tools/ -Recurse -Severity Warning -EnableExit

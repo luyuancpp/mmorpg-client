@@ -21,16 +21,22 @@ namespace MmorpgClient.Net
         private NetworkStream _stream;
         private Thread _readerThread;
         private Thread _writerThread;
-        private readonly BlockingCollection<byte[]> _outbox = new(new ConcurrentQueue<byte[]>());
+        private readonly BlockingCollection<byte[]> _outbox = new(new ConcurrentQueue<byte[]>(), MaxOutboxFrames);
         private readonly ConcurrentQueue<IMessage> _inbox = new();
         private readonly ConcurrentQueue<string> _errors = new();
         private volatile bool _running;
+        private int _disconnectFired;
+
+        /// <summary>Bounded outbox to apply backpressure if the writer thread
+        /// stalls (e.g. socket buffer full). Tune per game; 1024 frames is
+        /// roughly 1MB at the 1KB client request cap.</summary>
+        public const int MaxOutboxFrames = 1024;
 
         public event Action<IMessage> OnMessage;
         public event Action<string> OnError;
         public event Action OnDisconnected;
 
-        public bool Connected => _tcp != null && _tcp.Connected;
+        public bool Connected => _tcp != null && _tcp.Connected && _running;
 
         public GateTcpClient(MuduoCodec codec) { _codec = codec; }
 
@@ -50,14 +56,31 @@ namespace MmorpgClient.Net
         public void Send(IMessage message)
         {
             if (!_running) throw new InvalidOperationException("not connected");
-            _outbox.Add(_codec.Encode(message));
+            // TryAdd respects bounded capacity; if the writer thread is
+            // wedged we drop the frame and surface an error rather than
+            // letting memory grow unbounded.
+            if (!_outbox.TryAdd(_codec.Encode(message), millisecondsTimeout: 50))
+            {
+                _errors.Enqueue("outbox full -- dropping frame and disconnecting");
+                _running = false;
+                try { _stream?.Close(); } catch { }
+            }
         }
 
         /// <summary>Drain queued events on the Unity main thread.</summary>
         public void Poll()
         {
             while (_errors.TryDequeue(out var err)) OnError?.Invoke(err);
-            while (_inbox.TryDequeue(out var msg)) OnMessage?.Invoke(msg);
+            while (_inbox.TryDequeue(out var msg))
+            {
+                if (msg is DisconnectedSentinel)
+                {
+                    if (Interlocked.Exchange(ref _disconnectFired, 1) == 0)
+                        OnDisconnected?.Invoke();
+                    continue;
+                }
+                OnMessage?.Invoke(msg);
+            }
         }
 
         private void ReaderLoop()
