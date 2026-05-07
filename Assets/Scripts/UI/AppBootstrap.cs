@@ -84,14 +84,12 @@ namespace MmorpgClient.UI
 
             // backdrop layers
             _backdropTop = new GGraph();
-            _backdropTop.SetSize(_root.width, _root.height * 0.4f);
-            _backdropTop.DrawRect(0, Color.clear, Theme.BgTop);
+            _backdropTop.DrawRect(_root.width, _root.height * 0.4f, 0, Color.clear, Theme.BgTop);
             _root.AddChild(_backdropTop);
 
             _backdropBottom = new GGraph();
             _backdropBottom.SetPosition(0, _root.height * 0.4f);
-            _backdropBottom.SetSize(_root.width, _root.height * 0.6f);
-            _backdropBottom.DrawRect(0, Color.clear, Theme.BgBottom);
+            _backdropBottom.DrawRect(_root.width, _root.height * 0.6f, 0, Color.clear, Theme.BgBottom);
             _root.AddChild(_backdropBottom);
 
             _host = new GComponent();
@@ -103,9 +101,9 @@ namespace MmorpgClient.UI
         {
             float w = GRoot.inst.width, h = GRoot.inst.height;
             _root.SetSize(w, h);
-            _backdropTop.SetSize(w, h * 0.4f);
+            _backdropTop.DrawRect(w, h * 0.4f, 0, Color.clear, Theme.BgTop);
             _backdropBottom.SetPosition(0, h * 0.4f);
-            _backdropBottom.SetSize(w, h * 0.6f);
+            _backdropBottom.DrawRect(w, h * 0.6f, 0, Color.clear, Theme.BgBottom);
             _host.SetSize(w, h);
             Router?.OnRootResize();
         }

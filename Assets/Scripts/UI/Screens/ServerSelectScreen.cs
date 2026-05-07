@@ -130,14 +130,14 @@ namespace MmorpgClient.UI.Screens
                     badge.SetSize(48, 22);
                     badge.SetXY(w - 64, 8);
                     var bg = new GGraph();
-                    bg.SetSize(48, 22);
-                    bg.DrawRect(0, Color.clear, Theme.Accent);
+                    bg.DrawRect(48, 22, 0, Color.clear, Theme.Accent);
                     badge.AddChild(bg);
                     var bt = new GTextField();
                     bt.SetSize(48, 22);
                     bt.text = "推荐";
-                    bt.textFormat = new TextFormat { color = UnityEngine.Color.black, size = 12, bold = true, align = AlignType.Center, verticalAlign = VertAlignType.Middle };
+                    bt.textFormat = new TextFormat { color = UnityEngine.Color.black, size = 12, bold = true, align = AlignType.Center };
                     bt.ApplyFormat();
+                    bt.verticalAlign = VertAlignType.Middle;
                     badge.AddChild(bt);
                     row.AddChild(badge);
                 }

@@ -33,8 +33,7 @@ namespace MmorpgClient.UI
             c.opaque = true;
 
             var bg = new GGraph();
-            bg.SetSize(w, h);
-            bg.DrawRect(1, PanelEdge, Panel);
+            bg.DrawRect(w, h, 1, PanelEdge, Panel);
             c.AddChild(bg);
             return c;
         }
@@ -83,8 +82,7 @@ namespace MmorpgClient.UI
             btn.opaque = true;
 
             var bg = new GGraph();
-            bg.SetSize(w, h);
-            bg.DrawRect(0, Color.clear, baseCol);
+            bg.DrawRect(w, h, 0, Color.clear, baseCol);
             btn.AddChild(bg);
 
             var label = new GTextField();
@@ -93,14 +91,15 @@ namespace MmorpgClient.UI
             label.textFormat = new TextFormat
             {
                 color = textCol, size = 14, bold = true,
-                align = AlignType.Center, verticalAlign = VertAlignType.Middle,
+                align = AlignType.Center,
             };
             label.ApplyFormat();
+            label.verticalAlign = VertAlignType.Middle;
             btn.AddChild(label);
 
             var hover = new Color(Mathf.Min(1, baseCol.r * 1.18f), Mathf.Min(1, baseCol.g * 1.18f), Mathf.Min(1, baseCol.b * 1.18f), baseCol.a);
-            btn.onRollOver.Add(() => bg.DrawRect(0, Color.clear, hover));
-            btn.onRollOut.Add(() => bg.DrawRect(0, Color.clear, baseCol));
+            btn.onRollOver.Add(() => bg.DrawRect(w, h, 0, Color.clear, hover));
+            btn.onRollOut.Add(() => bg.DrawRect(w, h, 0, Color.clear, baseCol));
             btn.onClick.Add(_ => onClick?.Invoke());
             return btn;
         }
@@ -126,8 +125,7 @@ namespace MmorpgClient.UI
 
             var bg = new GGraph();
             bg.SetPosition(112, 0);
-            bg.SetSize(rowW - 112, 28);
-            bg.DrawRect(1, new Color(1, 1, 1, 0.18f), new Color(1, 1, 1, 0.06f));
+            bg.DrawRect(rowW - 112, 28, 1, new Color(1, 1, 1, 0.18f), new Color(1, 1, 1, 0.06f));
             row.AddChild(bg);
 
             var input = new GTextInput();

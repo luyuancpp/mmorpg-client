@@ -27,7 +27,7 @@ namespace MmorpgClient.UI.Screens
             var top = new GComponent();
             top.SetSize(root.width, 36);
             top.AddRelation(root, RelationType.Width);
-            var topBg = new GGraph(); topBg.SetSize(root.width, 36); topBg.DrawRect(0, Color.clear, new Color(0, 0, 0, 0.55f)); topBg.AddRelation(root, RelationType.Width);
+            var topBg = new GGraph(); topBg.DrawRect(root.width, 36, 0, Color.clear, new Color(0, 0, 0, 0.55f)); topBg.AddRelation(root, RelationType.Width);
             top.AddChild(topBg);
 
             _topbarLabel = new GTextField();
@@ -49,7 +49,7 @@ namespace MmorpgClient.UI.Screens
             _logPanel.SetSize(360, 160);
             _logPanel.SetXY(16, root.height - 176);
             _logPanel.AddRelation(root, RelationType.Bottom_Bottom);
-            var lbg = new GGraph(); lbg.SetSize(360, 160); lbg.DrawRect(0, Color.clear, new Color(0, 0, 0, 0.55f));
+            var lbg = new GGraph(); lbg.DrawRect(360, 160, 0, Color.clear, new Color(0, 0, 0, 0.55f));
             _logPanel.AddChild(lbg);
             _logText = new GTextField();
             _logText.SetXY(8, 6);
