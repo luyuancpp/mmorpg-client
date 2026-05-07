@@ -34,6 +34,7 @@ if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir | Out
 # .proto files the client needs (request/response/notify on the gate channel).
 # protoc resolves transitive imports via --proto_path automatically.
 $files = @(
+    "proto/chat/chat.proto",
     "proto/common/base/common.proto",
     "proto/common/base/empty.proto",
     "proto/common/base/message.proto",

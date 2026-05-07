@@ -8,7 +8,7 @@ namespace MmorpgClient.World
     /// cylinders for NPCs) parented under the world container. The local
     /// player is highlighted in green.
     /// </summary>
-    internal sealed class ActorView
+    public sealed class ActorView
     {
         public ulong Entity;
         public ActorKind Kind;
