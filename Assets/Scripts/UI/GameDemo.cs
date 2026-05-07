@@ -35,7 +35,12 @@ namespace MmorpgClient.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoSpawn()
         {
-            if (FindAnyObjectByType<GameDemo>() != null) return;
+            if (FindAnyObjectByType<GameDemo>() != null)
+            {
+                Debug.Log("[GameDemo] AutoSpawn skipped (already exists in scene)");
+                return;
+            }
+            Debug.Log("[GameDemo] AutoSpawn creating [GameDemo] GameObject");
             new GameObject("[GameDemo]").AddComponent<GameDemo>();
         }
 
@@ -143,6 +148,7 @@ namespace MmorpgClient.UI
 
         private void Awake()
         {
+            Debug.Log($"[GameDemo] Awake on '{name}' (screen={Screen.width}x{Screen.height})");
             EnsureSceneRig();
             EnsurePreviewActor();
             ApplyPreviewRoleVisual();
@@ -714,10 +720,22 @@ namespace MmorpgClient.UI
             GUI.color = old;
         }
 
+        private static int _onGuiTickCount;
+
         private void OnGUI()
         {
-            EnsureGuiStyles();
-            DrawBackground();
+            // Sentinel: always draw a red marker so we can tell OnGUI is running
+            // even when later GUI code throws or layouts off-screen.
+            var prevColor = GUI.color;
+            GUI.color = Color.red;
+            GUI.Box(new Rect(8, 8, 220, 26), $"[GameDemo OnGUI #{_onGuiTickCount++}]");
+            GUI.color = prevColor;
+            if (_onGuiTickCount == 1) Debug.Log("[GameDemo] First OnGUI tick fired");
+
+            try
+            {
+                EnsureGuiStyles();
+                DrawBackground();
 
             float panelW = Mathf.Min(780f, Screen.width - 36f);
             float panelH = Mathf.Min(560f, Screen.height - 36f);
@@ -747,6 +765,14 @@ namespace MmorpgClient.UI
             GUILayout.EndArea();
             DrawAnnouncementPopup();
             DrawSceneFade();
+            }
+            catch (Exception ex)
+            {
+                GUI.color = Color.red;
+                GUI.Label(new Rect(8, 40, Screen.width - 16, 200), "OnGUI exception:\n" + ex);
+                GUI.color = prevColor;
+                if (Event.current.type == EventType.Repaint) Debug.LogException(ex);
+            }
         }
 
         private void DrawLandingStage()
