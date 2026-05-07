@@ -31,6 +31,10 @@ namespace MmorpgClient.UI.Screens
         public GComponent Build(AppBootstrap app)
         {
             _app = app;
+            var packagedRoot = BuildFromPackage(app);
+            if (packagedRoot != null)
+                return packagedRoot;
+
             var root = new GComponent();
             root.SetSize(GRoot.inst.width, GRoot.inst.height);
 
@@ -87,6 +91,42 @@ namespace MmorpgClient.UI.Screens
             return root;
         }
 
+        private GComponent BuildFromPackage(AppBootstrap app)
+        {
+            var root = Theme.TryCreateFromPackage(Theme.UiId.RoleRoot);
+            if (root == null) return null;
+
+            _nickField = Theme.Find<GTextInput>(root, Theme.UiId.RoleNickInput);
+            _statusLabel = Theme.Find<GTextField>(root, Theme.UiId.RoleStatus);
+            _previewLabel = Theme.Find<GTextField>(root, Theme.UiId.RolePreviewText);
+            _previewSwatch = Theme.Find<GGraph>(root, Theme.UiId.RolePreviewSwatch);
+            _enterBtn = Theme.Find<GComponent>(root, Theme.UiId.RoleEnterBtn);
+
+            var btnBack = Theme.Find<GButton>(root, Theme.UiId.RoleBackBtn);
+            var btnClass1 = Theme.Find<GButton>(root, Theme.UiId.RoleClassBtn1);
+            var btnClass2 = Theme.Find<GButton>(root, Theme.UiId.RoleClassBtn2);
+            var btnClass3 = Theme.Find<GButton>(root, Theme.UiId.RoleClassBtn3);
+
+            if (_nickField == null || _statusLabel == null || _previewLabel == null || _enterBtn == null || btnBack == null)
+            {
+                root.Dispose();
+                return null;
+            }
+
+            _nickField.text = app.Session.RoleNickname;
+            if (_enterBtn is GButton enterButton)
+                enterButton.onClick.Add(_ => OnEnterPressed());
+            else
+                _enterBtn.onClick.Add(_ => OnEnterPressed());
+
+            btnBack.onClick.Add(_ => _app.Router.Show<ServerSelectScreen>());
+            btnClass1?.onClick.Add(_ => SetArchetype(0));
+            btnClass2?.onClick.Add(_ => SetArchetype(1));
+            btnClass3?.onClick.Add(_ => SetArchetype(2));
+            ApplyPreview();
+            return root;
+        }
+
         public void OnEnter() { ApplyPreview(); }
         public void OnExit() { }
         public void Tick(float dt) { }
@@ -96,8 +136,9 @@ namespace MmorpgClient.UI.Screens
         private void ApplyPreview()
         {
             int i = Mathf.Clamp(_app.Session.RoleArchetypeIndex, 0, Archetypes.Length - 1);
-            _previewSwatch.DrawEllipse(104, 104, Tints[i]);
-            _previewLabel.text = $"{Archetypes[i]} · 武器: {Weapons[i]}";
+            _previewSwatch?.DrawEllipse(104, 104, Tints[i]);
+            if (_previewLabel != null)
+                _previewLabel.text = $"{Archetypes[i]} · 武器: {Weapons[i]}";
         }
 
         private void OnEnterPressed()

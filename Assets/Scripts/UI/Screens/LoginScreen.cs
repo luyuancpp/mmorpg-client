@@ -19,6 +19,10 @@ namespace MmorpgClient.UI.Screens
         public GComponent Build(AppBootstrap app)
         {
             _app = app;
+            var packagedRoot = BuildFromPackage(app);
+            if (packagedRoot != null)
+                return packagedRoot;
+
             var root = new GComponent();
             root.SetSize(GRoot.inst.width, GRoot.inst.height);
 
@@ -79,6 +83,35 @@ namespace MmorpgClient.UI.Screens
             _statusLabel.SetXY(x, y);
             _card.AddChild(_statusLabel);
 
+            return root;
+        }
+
+        private GComponent BuildFromPackage(AppBootstrap app)
+        {
+            var root = Theme.TryCreateFromPackage(Theme.UiId.LoginRoot);
+            if (root == null) return null;
+
+            _announceList = Theme.Find<GComponent>(root, Theme.UiId.LoginAnnouncementList);
+            _gatewayField = Theme.Find<GTextInput>(root, Theme.UiId.LoginGatewayInput);
+            _accountField = Theme.Find<GTextInput>(root, Theme.UiId.LoginAccountInput);
+            _passwordField = Theme.Find<GTextInput>(root, Theme.UiId.LoginPasswordInput);
+            _statusLabel = Theme.Find<GTextField>(root, Theme.UiId.LoginStatus);
+
+            var btnEnter = Theme.Find<GButton>(root, Theme.UiId.LoginEnterBtn);
+            var btnRefresh = Theme.Find<GButton>(root, Theme.UiId.LoginRefreshBtn);
+
+            if (_announceList == null || _gatewayField == null || _accountField == null || _passwordField == null || _statusLabel == null || btnEnter == null || btnRefresh == null)
+            {
+                root.Dispose();
+                return null;
+            }
+
+            _gatewayField.text = app.Session.GatewayBaseUrl;
+            _accountField.text = app.Session.Account;
+            _passwordField.text = app.Session.Password;
+
+            btnEnter.onClick.Add(_ => OnEnterServerSelect());
+            btnRefresh.onClick.Add(_ => _app.Run(LoadAnnouncements()));
             return root;
         }
 

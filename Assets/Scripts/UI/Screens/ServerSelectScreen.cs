@@ -21,6 +21,10 @@ namespace MmorpgClient.UI.Screens
         public GComponent Build(AppBootstrap app)
         {
             _app = app;
+            var packagedRoot = BuildFromPackage(app);
+            if (packagedRoot != null)
+                return packagedRoot;
+
             var root = new GComponent();
             root.SetSize(GRoot.inst.width, GRoot.inst.height);
 
@@ -56,6 +60,36 @@ namespace MmorpgClient.UI.Screens
             backBtn.SetXY(x + 292, y);
             _card.AddChild(backBtn);
 
+            return root;
+        }
+
+        private GComponent BuildFromPackage(AppBootstrap app)
+        {
+            var root = Theme.TryCreateFromPackage(Theme.UiId.ServerRoot);
+            if (root == null) return null;
+
+            _zoneList = Theme.Find<GComponent>(root, Theme.UiId.ServerList);
+            _statusLabel = Theme.Find<GTextField>(root, Theme.UiId.ServerStatus);
+            _confirmBtn = Theme.Find<GComponent>(root, Theme.UiId.ServerConfirmBtn);
+
+            var btnRefresh = Theme.Find<GButton>(root, Theme.UiId.ServerRefreshBtn);
+            var btnBack = Theme.Find<GButton>(root, Theme.UiId.ServerBackBtn);
+
+            if (_zoneList == null || _statusLabel == null || _confirmBtn == null || btnRefresh == null || btnBack == null)
+            {
+                root.Dispose();
+                return null;
+            }
+
+            _confirmBtn.touchable = false;
+            _confirmBtn.alpha = 0.5f;
+            if (_confirmBtn is GButton confirmButton)
+                confirmButton.onClick.Add(_ => OnConfirm());
+            else
+                _confirmBtn.onClick.Add(_ => OnConfirm());
+
+            btnRefresh.onClick.Add(_ => _app.Run(LoadZones()));
+            btnBack.onClick.Add(_ => _app.Router.Show<LoginScreen>());
             return root;
         }
 

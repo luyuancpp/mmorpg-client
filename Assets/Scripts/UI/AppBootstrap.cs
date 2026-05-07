@@ -1,4 +1,5 @@
 using System.Collections;
+using System;
 using FairyGUI;
 using MmorpgClient.Game;
 using MmorpgClient.Net;
@@ -43,6 +44,7 @@ namespace MmorpgClient.UI
 
             EnsureSceneRig();
             EnsureFairyGUIStage();
+            TryLoadUiPackage();
 
             Session    = new SessionModel();
             Gateway    = new GatewayHttpClient(Session.GatewayBaseUrl);
@@ -73,6 +75,20 @@ namespace MmorpgClient.UI
             // Touch GRoot.inst to ensure the root container exists.
             _ = Stage.inst;
             _ = GRoot.inst;
+        }
+
+        private void TryLoadUiPackage()
+        {
+            if (UIPackage.GetByName(Theme.UiPackageName) != null) return;
+            try
+            {
+                UIPackage.AddPackage(Theme.UiPackagePath);
+                Debug.Log($"[AppBootstrap] loaded FairyGUI package: {Theme.UiPackagePath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[AppBootstrap] FairyGUI package not found, fallback to code UI. path={Theme.UiPackagePath}, err={ex.Message}");
+            }
         }
 
         private void BuildRoot()

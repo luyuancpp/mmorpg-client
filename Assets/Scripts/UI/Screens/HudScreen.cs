@@ -19,6 +19,10 @@ namespace MmorpgClient.UI.Screens
         public GComponent Build(AppBootstrap app)
         {
             _app = app;
+            var packagedRoot = BuildFromPackage(app);
+            if (packagedRoot != null)
+                return packagedRoot;
+
             var root = new GComponent();
             root.SetSize(GRoot.inst.width, GRoot.inst.height);
             root.opaque = false;
@@ -65,6 +69,28 @@ namespace MmorpgClient.UI.Screens
             skill.AddRelation(root, RelationType.Bottom_Bottom);
             root.AddChild(skill);
 
+            return root;
+        }
+
+        private GComponent BuildFromPackage(AppBootstrap app)
+        {
+            var root = Theme.TryCreateFromPackage(Theme.UiId.HudRoot);
+            if (root == null) return null;
+
+            _topbarLabel = Theme.Find<GTextField>(root, Theme.UiId.HudTopLabel);
+            _logText = Theme.Find<GTextField>(root, Theme.UiId.HudLogText);
+
+            var btnLogout = Theme.Find<GButton>(root, Theme.UiId.HudLogoutBtn);
+            var btnSkill = Theme.Find<GButton>(root, Theme.UiId.HudSkillBtn);
+
+            if (_topbarLabel == null || _logText == null || btnLogout == null || btnSkill == null)
+            {
+                root.Dispose();
+                return null;
+            }
+
+            btnLogout.onClick.Add(_ => _app.Router.Show<LoginScreen>());
+            btnSkill.onClick.Add(_ => OnReleaseSkill());
             return root;
         }
 

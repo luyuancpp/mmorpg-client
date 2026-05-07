@@ -10,6 +10,45 @@ namespace MmorpgClient.UI
     /// </summary>
     public static class Theme
     {
+        public const string UiPackageName = "qdao";
+        public const string UiPackagePath = "UI/qdao/qdao";
+
+        public static class UiId
+        {
+            public const string LoginRoot = "LoginScreen";
+            public const string LoginGatewayInput = "inputGateway";
+            public const string LoginAccountInput = "inputAccount";
+            public const string LoginPasswordInput = "inputPassword";
+            public const string LoginAnnouncementList = "listAnnouncement";
+            public const string LoginStatus = "txtStatus";
+            public const string LoginEnterBtn = "btnEnter";
+            public const string LoginRefreshBtn = "btnRefresh";
+
+            public const string ServerRoot = "ServerSelectScreen";
+            public const string ServerList = "listServer";
+            public const string ServerStatus = "txtStatus";
+            public const string ServerConfirmBtn = "btnConfirm";
+            public const string ServerRefreshBtn = "btnRefresh";
+            public const string ServerBackBtn = "btnBack";
+
+            public const string RoleRoot = "RoleCreateScreen";
+            public const string RoleNickInput = "inputNick";
+            public const string RoleStatus = "txtStatus";
+            public const string RolePreviewText = "txtPreview";
+            public const string RolePreviewSwatch = "previewSwatch";
+            public const string RoleEnterBtn = "btnEnter";
+            public const string RoleBackBtn = "btnBack";
+            public const string RoleClassBtn1 = "btnClass1";
+            public const string RoleClassBtn2 = "btnClass2";
+            public const string RoleClassBtn3 = "btnClass3";
+
+            public const string HudRoot = "HudScreen";
+            public const string HudTopLabel = "txtTop";
+            public const string HudLogText = "txtLog";
+            public const string HudLogoutBtn = "btnLogout";
+            public const string HudSkillBtn = "btnSkill";
+        }
+
         public static readonly Color BgTop       = new Color(0.17f, 0.31f, 0.28f);
         public static readonly Color BgBottom    = new Color(0.85f, 0.79f, 0.66f);
         public static readonly Color Panel       = new Color(0.17f, 0.24f, 0.20f, 0.90f);
@@ -25,6 +64,18 @@ namespace MmorpgClient.UI
         public static readonly Color ZoneSel     = new Color(0.30f, 0.44f, 0.38f, 0.98f);
         public static readonly Color Accent      = new Color(0.95f, 0.82f, 0.52f);
         public static readonly Color AccentSoft  = new Color(0.93f, 0.88f, 0.72f, 0.34f);
+
+        public static GComponent TryCreateFromPackage(string componentName)
+        {
+            if (UIPackage.GetByName(UiPackageName) == null) return null;
+            return UIPackage.CreateObject(UiPackageName, componentName) as GComponent;
+        }
+
+        public static T Find<T>(GComponent root, string childName) where T : GObject
+        {
+            if (root == null || string.IsNullOrEmpty(childName)) return null;
+            return root.GetChild(childName) as T;
+        }
 
         // ── Builders (placeholder skin until .fui packages are authored) ──
 
