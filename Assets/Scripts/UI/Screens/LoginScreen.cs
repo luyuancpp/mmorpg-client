@@ -40,17 +40,17 @@ namespace MmorpgClient.UI.Screens
             }
 
             float x = 26, y = 20;
-            var h1 = Theme.H1("青云问道录");
+            var h1 = Theme.H1("Q版道友");
             h1.SetXY(x, y);
             _card.AddChild(h1);
             y += 44;
 
-            var sub = Theme.P("Q版道门 · 轻松修行 · 温暖江湖", dim: false);
+            var sub = Theme.P("国风回合 · 正式启程 · 温暖江湖", dim: false);
             sub.SetXY(x, y);
             _card.AddChild(sub);
             y += 28;
 
-            var h2 = Theme.H2("道门告示");
+            var h2 = Theme.H2("公告");
             h2.SetXY(x, y);
             _card.AddChild(h2);
             y += 34;
@@ -63,7 +63,7 @@ namespace MmorpgClient.UI.Screens
             _card.AddChild(_announceList);
             y += 224;
 
-            var h3 = Theme.H2("入门凭证");
+            var h3 = Theme.H2("账号登录");
             h3.SetXY(x, y);
             _card.AddChild(h3);
             y += 34;
@@ -78,10 +78,10 @@ namespace MmorpgClient.UI.Screens
             _passwordField = pwField;
             pwRow.SetXY(x, y); _card.AddChild(pwRow); y += 44;
 
-            var btnEnter   = Theme.PrimaryButton("踏入山门", OnEnterServerSelect, 140, 40);
+            var btnEnter   = Theme.PrimaryButton("进入选服", OnEnterServerSelect, 140, 40);
             btnEnter.SetXY(x, y);
             _card.AddChild(btnEnter);
-            var btnRefresh = Theme.GhostButton("重读告示", () => _app.Run(LoadAnnouncements()), 124, 40);
+            var btnRefresh = Theme.GhostButton("刷新公告", () => _app.Run(LoadAnnouncements()), 124, 40);
             btnRefresh.SetXY(x + 152, y);
             _card.AddChild(btnRefresh);
             y += 48;
@@ -144,7 +144,7 @@ namespace MmorpgClient.UI.Screens
         private IEnumerator LoadAnnouncements()
         {
             _loading = true;
-            _statusLabel.text = "道童正在抄录告示...";
+            _statusLabel.text = "正在获取公告...";
             yield return _app.Gateway.GetAnnouncements(
                 resp =>
                 {
@@ -155,7 +155,7 @@ namespace MmorpgClient.UI.Screens
                 },
                 err =>
                 {
-                    _statusLabel.text = "告示抄录失败: " + err;
+                    _statusLabel.text = "公告获取失败: " + err;
                 });
             _loading = false;
         }
