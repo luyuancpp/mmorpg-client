@@ -43,7 +43,7 @@ namespace MmorpgClient.UI.Screens
 
             float x = 26, y = 20;
             var h1 = Theme.H1("选择服务器"); h1.SetXY(x, y); _card.AddChild(h1); y += 44;
-            var sub = Theme.P("请选择服务器，进入 Q版本道友 江湖", dim: false); sub.SetXY(x, y); _card.AddChild(sub); y += 30;
+            var sub = Theme.P("请选择服务器，进入 Q版道友江湖", dim: false); sub.SetXY(x, y); _card.AddChild(sub); y += 30;
 
             _zoneList = new GComponent();
             _zoneList.SetXY(x, y);

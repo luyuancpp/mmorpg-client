@@ -40,7 +40,7 @@ namespace MmorpgClient.UI.Screens
             }
 
             float x = 26, y = 20;
-            var h1 = Theme.H1("Q版本道友");
+            var h1 = Theme.H1("Q版道友");
             h1.SetXY(x, y);
             _card.AddChild(h1);
             y += 44;
