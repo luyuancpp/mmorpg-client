@@ -190,7 +190,7 @@ namespace MmorpgClient.UI.Screens
         private static string StatusText(ServerListZone z)
         {
             string s = string.IsNullOrEmpty(z.status) ? "OPEN" : z.status;
-            string l = string.IsNullOrEmpty(z.load_level) ? "" : " · 负载：" + LoadLevelText(z.load_level);
+            string l = string.IsNullOrEmpty(z.load_level) ? "" : "，负载：" + LoadLevelText(z.load_level);
             return "状态：" + ServerStatusText(s) + l;
         }
 
@@ -202,7 +202,7 @@ namespace MmorpgClient.UI.Screens
                 "MAINTENANCE" => "维护中",
                 "CLOSED"      => "已关闭",
                 "PREVIEW"     => "预告",
-                _             => status,
+                _             => "未知",
             };
         }
 
@@ -214,7 +214,7 @@ namespace MmorpgClient.UI.Screens
                 "MEDIUM" => "繁忙",
                 "HIGH"   => "火爆",
                 "FULL"   => "爆满",
-                _        => loadLevel,
+                _        => "未知",
             };
         }
 
