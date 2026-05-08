@@ -42,8 +42,8 @@ namespace MmorpgClient.UI.Screens
             }
 
             float x = 26, y = 20;
-            var h1 = Theme.H1("道场择域"); h1.SetXY(x, y); _card.AddChild(h1); y += 44;
-            var sub = Theme.P("请择一处灵脉安身，开启你的 Q 版修行", dim: false); sub.SetXY(x, y); _card.AddChild(sub); y += 30;
+            var h1 = Theme.H1("选择服务器"); h1.SetXY(x, y); _card.AddChild(h1); y += 44;
+            var sub = Theme.P("请选择服务器，进入 Q版本道友 江湖", dim: false); sub.SetXY(x, y); _card.AddChild(sub); y += 30;
 
             _zoneList = new GComponent();
             _zoneList.SetXY(x, y);
@@ -53,17 +53,17 @@ namespace MmorpgClient.UI.Screens
 
             _statusLabel = Theme.P(""); _statusLabel.SetXY(x, y); _card.AddChild(_statusLabel); y += 24;
 
-            _confirmBtn = Theme.PrimaryButton("前往选角", OnConfirm, 150, 40);
+            _confirmBtn = Theme.PrimaryButton("确认进入", OnConfirm, 150, 40);
             _confirmBtn.SetXY(x, y);
             _confirmBtn.touchable = false;
             _confirmBtn.alpha = 0.5f;
             _card.AddChild(_confirmBtn);
 
-            var refreshBtn = Theme.GhostButton("重查灵域", () => _app.Run(LoadZones()), 120, 40);
+            var refreshBtn = Theme.GhostButton("刷新列表", () => _app.Run(LoadZones()), 120, 40);
             refreshBtn.SetXY(x + 160, y);
             _card.AddChild(refreshBtn);
 
-            var backBtn = Theme.GhostButton("返山门", () => _app.Router.Show<LoginScreen>(), 110, 40);
+            var backBtn = Theme.GhostButton("返回登录", () => _app.Router.Show<LoginScreen>(), 110, 40);
             backBtn.SetXY(x + 292, y);
             _card.AddChild(backBtn);
 
@@ -118,7 +118,7 @@ namespace MmorpgClient.UI.Screens
         private IEnumerator LoadZones()
         {
             _loading = true;
-            _statusLabel.text = "正在观测灵域波动...";
+            _statusLabel.text = "正在获取服务器列表...";
             yield return _app.Gateway.GetServerList(
                 resp =>
                 {
@@ -127,9 +127,9 @@ namespace MmorpgClient.UI.Screens
                     if (_app.Session.SelectedZoneIndex < 0 && _app.Session.Zones.Count > 0)
                         _app.Session.SelectedZoneIndex = 0;
                     Rebuild();
-                    _statusLabel.text = $"共 {_app.Session.Zones.Count} 个区服";
+                    _statusLabel.text = $"共 {_app.Session.Zones.Count} 个服务器";
                 },
-                err => _statusLabel.text = "灵域观测失败: " + err);
+                err => _statusLabel.text = "服务器列表获取失败: " + err);
             _loading = false;
         }
 
@@ -190,8 +190,32 @@ namespace MmorpgClient.UI.Screens
         private static string StatusText(ServerListZone z)
         {
             string s = string.IsNullOrEmpty(z.status) ? "OPEN" : z.status;
-            string l = string.IsNullOrEmpty(z.load_level) ? "" : "·" + z.load_level;
-            return s + l;
+            string l = string.IsNullOrEmpty(z.load_level) ? "" : " · 负载：" + LoadLevelText(z.load_level);
+            return "状态：" + ServerStatusText(s) + l;
+        }
+
+        private static string ServerStatusText(string status)
+        {
+            return status.ToUpperInvariant() switch
+            {
+                "OPEN"        => "开放中",
+                "MAINTENANCE" => "维护中",
+                "CLOSED"      => "已关闭",
+                "PREVIEW"     => "预告",
+                _             => status,
+            };
+        }
+
+        private static string LoadLevelText(string loadLevel)
+        {
+            return loadLevel.ToUpperInvariant() switch
+            {
+                "LOW"    => "流畅",
+                "MEDIUM" => "繁忙",
+                "HIGH"   => "火爆",
+                "FULL"   => "爆满",
+                _        => loadLevel,
+            };
         }
 
         private static UnityEngine.Color StatusColor(ServerListZone z)
