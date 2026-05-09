@@ -32,10 +32,10 @@ namespace MmorpgClient.UI
         public GameClient   GameClient { get; private set; }
         public GatewayHttpClient Gateway { get; private set; }
         public ScreenRouter Router { get; private set; }
+        public bool QdaoPackageLoaded { get; private set; }
 
         private GComponent _root;
         private GComponent _host;
-        private GImage     _backdropArt;
         private GGraph     _backdropTop;
         private GGraph     _backdropBottom;
 
@@ -76,6 +76,22 @@ namespace MmorpgClient.UI
             // Touch GRoot.inst to ensure the root container exists.
             _ = Stage.inst;
             _ = GRoot.inst;
+
+            // Without a UIContentScaler, GRoot reports raw pixel size, so the
+            // qdao screens authored at 2560x1080 get resized to the window's
+            // pixel dimensions while their child art keeps the design-space
+            // positions/sizes -> wrong placement and wildly wrong scale.
+            // Configure a scaler so 2560x1080 maps consistently to the window.
+            var stageGo = Stage.inst.gameObject;
+            var scaler = stageGo.GetComponent<UIContentScaler>();
+            if (scaler == null)
+                scaler = stageGo.AddComponent<UIContentScaler>();
+            scaler.scaleMode = UIContentScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.designResolutionX = (int)Theme.Art.ReferenceWidth;
+            scaler.designResolutionY = (int)Theme.Art.ReferenceHeight;
+            scaler.screenMatchMode = UIContentScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.ApplyChange();
+            GRoot.inst.ApplyContentScaleFactor();
         }
 
         private void TryLoadUiPackage()
@@ -84,59 +100,63 @@ namespace MmorpgClient.UI
             try
             {
                 UIPackage.AddPackage(Theme.UiPackagePath);
+                QdaoPackageLoaded = true;
                 Debug.Log($"[AppBootstrap] loaded FairyGUI package: {Theme.UiPackagePath}");
             }
             catch (Exception ex)
             {
+                QdaoPackageLoaded = false;
                 Debug.LogWarning($"[AppBootstrap] FairyGUI package not found, fallback to code UI. path={Theme.UiPackagePath}, err={ex.Message}");
             }
         }
 
         private void BuildRoot()
         {
+            // _root is a fixed 2560x1080 design-space canvas. FairyGUI screen
+            // components own their visual art and interaction widgets in that
+            // same coordinate system. We then uniformly scale & center _root
+            // inside GRoot (letterbox / pillarbox) so the canvas keeps its
+            // aspect ratio at any window size.
             _root = new GComponent();
-            _root.SetSize(GRoot.inst.width, GRoot.inst.height);
-            _root.AddRelation(GRoot.inst, RelationType.Size);
+            _root.SetSize(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight);
             GRoot.inst.AddChild(_root);
 
-            _backdropArt = Theme.Image(Theme.Art.Backdrop, _root.width, _root.height);
-            if (_backdropArt != null)
-            {
-                _backdropArt.AddRelation(_root, RelationType.Size);
-                _root.AddChild(_backdropArt);
-            }
-            else
-            {
-                _backdropTop = new GGraph();
-                _backdropTop.DrawRect(_root.width, _root.height * 0.52f, 0, Color.clear, Theme.BgTop);
-                _root.AddChild(_backdropTop);
+            _backdropTop = new GGraph();
+            _backdropTop.DrawRect(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight * 0.52f, 0, Color.clear, Theme.BgTop);
+            _root.AddChild(_backdropTop);
 
-                _backdropBottom = new GGraph();
-                _backdropBottom.SetXY(0, _root.height * 0.52f);
-                _backdropBottom.DrawRect(_root.width, _root.height * 0.48f, 0, Color.clear, Theme.BgBottom);
-                _root.AddChild(_backdropBottom);
-
-                var moon = new GGraph();
-                moon.SetXY(_root.width - 210, 44);
-                moon.DrawEllipse(120, 120, new Color(1f, 0.97f, 0.84f, 0.32f));
-                _root.AddChild(moon);
-            }
+            _backdropBottom = new GGraph();
+            _backdropBottom.SetXY(0, Theme.Art.ReferenceHeight * 0.52f);
+            _backdropBottom.DrawRect(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight * 0.48f, 0, Color.clear, Theme.BgBottom);
+            _root.AddChild(_backdropBottom);
 
             _host = new GComponent();
-            _host.SetSize(_root.width, _root.height);
+            _host.SetSize(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight);
             _root.AddChild(_host);
+
+            FitRootToScreen();
         }
 
         private void OnRootResize()
         {
-            float w = GRoot.inst.width, h = GRoot.inst.height;
-            _root.SetSize(w, h);
-            _backdropArt?.SetSize(w, h);
-            _backdropTop?.DrawRect(w, h * 0.52f, 0, Color.clear, Theme.BgTop);
-            _backdropBottom?.SetXY(0, h * 0.52f);
-            _backdropBottom?.DrawRect(w, h * 0.48f, 0, Color.clear, Theme.BgBottom);
-            _host.SetSize(w, h);
+            FitRootToScreen();
             Router?.OnRootResize();
+        }
+
+        /// <summary>
+        /// Uniformly scale the 2560x1080 design canvas to fit GRoot, preserving
+        /// aspect ratio (letterbox / pillarbox). Backdrop + UI keep pixel-exact
+        /// alignment because they share the same parent transform.
+        /// </summary>
+        private void FitRootToScreen()
+        {
+            if (_root == null) return;
+            float gw = Mathf.Max(1f, GRoot.inst.width  > 1f ? GRoot.inst.width  : Screen.width);
+            float gh = Mathf.Max(1f, GRoot.inst.height > 1f ? GRoot.inst.height : Screen.height);
+            float scale = Mathf.Min(gw / Theme.Art.ReferenceWidth, gh / Theme.Art.ReferenceHeight);
+            _root.SetScale(scale, scale);
+            _root.SetXY((gw - Theme.Art.ReferenceWidth  * scale) * 0.5f,
+                        (gh - Theme.Art.ReferenceHeight * scale) * 0.5f);
         }
 
         private void EnsureSceneRig()

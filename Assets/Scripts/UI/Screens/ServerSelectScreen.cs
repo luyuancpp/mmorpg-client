@@ -1,5 +1,6 @@
 using System.Collections;
 using FairyGUI;
+using MmorpgClient.UI;
 using MmorpgClient.Net;
 using UnityEngine;
 
@@ -11,16 +12,26 @@ namespace MmorpgClient.UI.Screens
     /// </summary>
     public sealed class ServerSelectScreen : IScreen
     {
+        private static readonly (string key, string fallback)[] ZoneTabs =
+        {
+            ("server.tab.mine", "我的角色"),
+            ("server.tab.recommend", "推荐区服"),
+            ("server.tab.preview", "预告专区"),
+            ("server.tab.all", "全部区服"),
+        };
+
         private AppBootstrap _app;
-        private GComponent _card;
+        private GComponent _tabList;
         private GComponent _zoneList;
         private GTextField _statusLabel;
         private GComponent _confirmBtn;
         private bool _loading;
+        private int _activeTab = 1;
 
         public GComponent Build(AppBootstrap app)
         {
             _app = app;
+
             var packagedRoot = BuildFromPackage(app);
             if (packagedRoot != null)
                 return packagedRoot;
@@ -28,62 +39,62 @@ namespace MmorpgClient.UI.Screens
             var root = new GComponent();
             root.SetSize(GRoot.inst.width, GRoot.inst.height);
 
-            const float CW = 760, CH = 590;
-            _card = Theme.Card(CW, CH);
-            _card.SetXY((root.width - CW) * 0.5f, (root.height - CH) * 0.5f);
-            _card.AddRelation(root, RelationType.Center_Center);
-            root.AddChild(_card);
-
-            var scroll = Theme.Image(Theme.Art.ServerScroll, 238, 136);
-            if (scroll != null)
-            {
-                scroll.SetXY(CW - 284, 12);
-                _card.AddChild(scroll);
-            }
-
-            float x = 26, y = 20;
-            var h1 = Theme.H1("道场择域"); h1.SetXY(x, y); _card.AddChild(h1); y += 44;
-            var sub = Theme.P("请择一处灵脉安身，开启你的 Q 版修行", dim: false); sub.SetXY(x, y); _card.AddChild(sub); y += 30;
+            _tabList = new GComponent();
+            _tabList.SetSize(root.width, root.height);
+            root.AddChild(_tabList);
 
             _zoneList = new GComponent();
-            _zoneList.SetXY(x, y);
-            _zoneList.SetSize(CW - x * 2, 390);
-            _card.AddChild(_zoneList);
-            y += 402;
+            _zoneList.SetSize(root.width, root.height);
+            root.AddChild(_zoneList);
 
-            _statusLabel = Theme.P(""); _statusLabel.SetXY(x, y); _card.AddChild(_statusLabel); y += 24;
+            _statusLabel = Theme.ArtText("", Theme.TextDim, 18, false, AlignType.Center);
+            Theme.SetArtRect(_statusLabel, root.width, root.height, 1120, 910, 520, 34);
+            root.AddChild(_statusLabel);
 
-            _confirmBtn = Theme.PrimaryButton("前往选角", OnConfirm, 150, 40);
-            _confirmBtn.SetXY(x, y);
+            _confirmBtn = AddHitButton(root, 1722, 866, 154, 65, OnConfirm);
             _confirmBtn.touchable = false;
             _confirmBtn.alpha = 0.5f;
-            _card.AddChild(_confirmBtn);
 
-            var refreshBtn = Theme.GhostButton("重查灵域", () => _app.Run(LoadZones()), 120, 40);
-            refreshBtn.SetXY(x + 160, y);
-            _card.AddChild(refreshBtn);
-
-            var backBtn = Theme.GhostButton("返山门", () => _app.Router.Show<LoginScreen>(), 110, 40);
-            backBtn.SetXY(x + 292, y);
-            _card.AddChild(backBtn);
+            AddHitButton(root, 1490, 872, 170, 50, () => _app.Run(LoadZones()));
+            AddHitButton(root, 1300, 872, 150, 50, () => _app.Router.Show<LoginScreen>());
 
             return root;
+        }
+
+        private static GComponent AddHitButton(GComponent root, float x, float y, float w, float h, System.Action onClick)
+        {
+            var btn = new GComponent();
+            btn.touchable = true;
+            Theme.SetArtRect(btn, root.width, root.height, x, y, w, h);
+            btn.onClick.Add(_ => onClick?.Invoke());
+            root.AddChild(btn);
+            return btn;
         }
 
         private GComponent BuildFromPackage(AppBootstrap app)
         {
             var root = Theme.TryCreateFromPackage(Theme.UiId.ServerRoot);
-            if (root == null) return null;
+            if (root == null)
+                return null;
 
-            _zoneList = Theme.Find<GComponent>(root, Theme.UiId.ServerList);
+            // ScreenRouter sizes us to the 2560x1080 host. Do NOT bind size to
+            // GRoot — that would re-stretch the design canvas to window pixels.
+            Theme.SetImageTexture(Theme.Find<GImage>(root, Theme.UiId.SceneBackdrop), Theme.Art.SceneBackdrop);
+
+            _zoneList = ReplacePackagedDynamicLayer(root, Theme.UiId.ServerList);
             _statusLabel = Theme.Find<GTextField>(root, Theme.UiId.ServerStatus);
             _confirmBtn = Theme.Find<GComponent>(root, Theme.UiId.ServerConfirmBtn);
+
+            _tabList = new GComponent();
+            _tabList.SetSize(root.width, root.height);
+            root.AddChild(_tabList);
 
             var btnRefresh = Theme.Find<GButton>(root, Theme.UiId.ServerRefreshBtn);
             var btnBack = Theme.Find<GButton>(root, Theme.UiId.ServerBackBtn);
 
             if (_zoneList == null || _statusLabel == null || _confirmBtn == null || btnRefresh == null || btnBack == null)
             {
+                Debug.LogWarning("[ServerSelectScreen] FairyGUI ServerSelectScreen component is missing required children; fallback to code UI.");
                 root.Dispose();
                 return null;
             }
@@ -91,13 +102,31 @@ namespace MmorpgClient.UI.Screens
             _confirmBtn.touchable = false;
             _confirmBtn.alpha = 0.5f;
             if (_confirmBtn is GButton confirmButton)
+            {
                 confirmButton.onClick.Add(_ => OnConfirm());
+            }
             else
+            {
                 _confirmBtn.onClick.Add(_ => OnConfirm());
+            }
 
             btnRefresh.onClick.Add(_ => _app.Run(LoadZones()));
             btnBack.onClick.Add(_ => _app.Router.Show<LoginScreen>());
             return root;
+        }
+
+        private static GComponent ReplacePackagedDynamicLayer(GComponent root, string childName)
+        {
+            var oldLayer = root.GetChild(childName);
+            var index = oldLayer != null ? root.GetChildIndex(oldLayer) : root.numChildren;
+            if (oldLayer != null)
+                root.RemoveChild(oldLayer, true);
+
+            var layer = new GComponent { name = childName };
+            layer.SetSize(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight);
+            layer.touchable = true;
+            root.AddChildAt(layer, index);
+            return layer;
         }
 
         public void OnEnter()
@@ -118,7 +147,7 @@ namespace MmorpgClient.UI.Screens
         private IEnumerator LoadZones()
         {
             _loading = true;
-            _statusLabel.text = "正在观测灵域波动...";
+            _statusLabel.text = Text("server.loading", "正在获取区服...");
             yield return _app.Gateway.GetServerList(
                 resp =>
                 {
@@ -127,64 +156,150 @@ namespace MmorpgClient.UI.Screens
                     if (_app.Session.SelectedZoneIndex < 0 && _app.Session.Zones.Count > 0)
                         _app.Session.SelectedZoneIndex = 0;
                     Rebuild();
-                    _statusLabel.text = $"共 {_app.Session.Zones.Count} 个区服";
+                    _statusLabel.text = string.Format(Text("server.count", "共 {0} 个区服"), _app.Session.Zones.Count);
                 },
-                err => _statusLabel.text = "灵域观测失败: " + err);
+                err => _statusLabel.text = string.Format(Text("server.error", "区服获取失败: {0}"), err));
             _loading = false;
         }
 
         private void Rebuild()
         {
+            RebuildTabs();
             _zoneList.RemoveChildren(0, -1, true);
-            float rowH = 62, gap = 8, w = _zoneList.width;
+
+            var rowSlots = new (float x, float y)[]
+            {
+                (955, 315), (1455, 315),
+                (955, 447), (1455, 447),
+                (955, 580), (1455, 580),
+                (955, 713), (1455, 713),
+            };
+            const float cellW = 467f, rowH = 97f;
+            int visibleIndex = 0;
             for (int i = 0; i < _app.Session.Zones.Count; i++)
             {
                 var z = _app.Session.Zones[i];
+                if (!IsVisibleInActiveTab(z)) continue;
+                if (visibleIndex >= rowSlots.Length) break;
+
                 int idx = i;
                 bool selected = (idx == _app.Session.SelectedZoneIndex);
-                var bgColor = selected ? Theme.ZoneSel : Theme.ZoneIdle;
-                var row = Theme.FlatButton("", w, rowH, bgColor, Theme.TextPrim, () =>
+                var slot = rowSlots[visibleIndex];
+                var row = new GComponent();
+                row.touchable = true;
+                Theme.SetArtRect(row, _zoneList.width, _zoneList.height, slot.x, slot.y, cellW, rowH);
+                row.onClick.Add(_ =>
                 {
                     _app.Session.SelectedZoneIndex = idx;
                     Rebuild();
                 });
-                row.SetXY(0, i * (rowH + gap));
+
+                var rowBg = Theme.Image(visibleIndex % 2 == 0 ? Theme.Art.ServerRow : Theme.Art.ServerRowAlt, row.width, row.height);
+                if (rowBg != null)
+                    row.AddChild(rowBg);
+
+                if (selected)
+                {
+                    var selectedGlow = new GGraph();
+                    selectedGlow.DrawRect(row.width, row.height, 2, Theme.PanelEdge, new Color(0.18f, 0.62f, 0.52f, 0.18f));
+                    row.AddChild(selectedGlow);
+                }
 
                 var name = new GTextField();
-                name.SetXY(14, 8);
-                name.SetSize(w - 200, 24);
-                name.text = $"#{z.zone_id}  {z.name}";
-                name.textFormat = new TextFormat { color = Theme.TextPrim, size = 16, bold = true, align = AlignType.Left };
+                name.SetXY(row.width * 0.16f, row.height * 0.24f);
+                name.SetSize(row.width * 0.56f, row.height * 0.28f);
+                name.text = z.name;
+                name.textFormat = new TextFormat { font = Theme.BodyFontName, color = Theme.TextPrim, size = 15, bold = true, align = AlignType.Left };
                 row.AddChild(name);
 
                 var status = new GTextField();
-                status.SetXY(14, 34);
-                status.SetSize(w - 200, 20);
-                status.text = StatusText(z);
-                status.textFormat = new TextFormat { color = StatusColor(z), size = 12 };
+                status.SetXY(row.width * 0.16f, row.height * 0.55f);
+                status.SetSize(row.width * 0.56f, row.height * 0.24f);
+                status.text = $"#{z.zone_id}  {StatusText(z)}";
+                status.textFormat = new TextFormat { font = Theme.BodyFontName, color = StatusColor(z), size = 12 };
                 row.AddChild(status);
 
                 if (z.recommended)
                 {
                     var badge = new GComponent();
-                    badge.SetSize(48, 22);
-                    badge.SetXY(w - 64, 8);
+                    badge.SetSize(row.width * 0.13f, row.height * 0.24f);
+                    badge.SetXY(row.width * 0.78f, row.height * 0.12f);
                     var bg = new GGraph();
-                    bg.DrawRect(48, 22, 0, Color.clear, Theme.Accent);
+                    bg.DrawRect(badge.width, badge.height, 0, Color.clear, Theme.Accent);
                     badge.AddChild(bg);
                     var bt = new GTextField();
-                    bt.SetSize(48, 22);
-                    bt.text = "推荐";
-                    bt.textFormat = new TextFormat { color = Color.black, size = 12, bold = true, align = AlignType.Center };
+                    bt.SetSize(badge.width, badge.height);
+                    bt.text = Text("server.recommended", "推荐");
+                    bt.textFormat = new TextFormat { font = Theme.BodyFontName, color = Color.black, size = 12, bold = true, align = AlignType.Center };
                     bt.verticalAlign = VertAlignType.Middle;
                     badge.AddChild(bt);
                     row.AddChild(badge);
                 }
                 _zoneList.AddChild(row);
+                visibleIndex++;
             }
-            bool can = _app.Session.SelectedZone != null;
+
+            if (visibleIndex == 0)
+            {
+                var text = Theme.ArtText(Text("server.empty", "当前分类暂无区服"), Theme.TextDim, 18, false, AlignType.Center);
+                Theme.SetArtRect(text, _zoneList.width, _zoneList.height, 1050, 500, 760, 48);
+                _zoneList.AddChild(text);
+            }
+            bool can = _app.Session.SelectedZone != null && IsVisibleInActiveTab(_app.Session.SelectedZone);
             _confirmBtn.touchable = can;
             _confirmBtn.alpha = can ? 1f : 0.5f;
+        }
+
+        private void RebuildTabs()
+        {
+            _tabList.RemoveChildren(0, -1, true);
+            for (int i = 0; i < ZoneTabs.Length; i++)
+            {
+                int idx = i;
+                bool selected = _activeTab == idx;
+                var tab = new GComponent();
+                tab.touchable = true;
+                Theme.SetArtRect(tab, _tabList.width, _tabList.height, 646, 363 + i * 74, 240, 68);
+                tab.onClick.Add(_ =>
+                {
+                    _activeTab = idx;
+                    Rebuild();
+                });
+                tab.alpha = selected ? 1f : 0.72f;
+
+                var tabBg = Theme.Image(Theme.Art.SideTab, tab.width, tab.height);
+                if (tabBg != null)
+                    tab.AddChild(tabBg);
+
+                var label = new GTextField();
+                label.SetSize(tab.width, tab.height);
+                label.text = Text(ZoneTabs[i].key, ZoneTabs[i].fallback);
+                label.textFormat = new TextFormat { font = Theme.BodyFontName, color = selected ? Color.white : Theme.TextPrim, size = 14, bold = true, align = AlignType.Center };
+                label.verticalAlign = VertAlignType.Middle;
+                tab.AddChild(label);
+
+                if (selected)
+                {
+                    var mark = Theme.Image(Theme.Art.IconTalisman, 26, 26);
+                    if (mark != null)
+                    {
+                        mark.SetXY(tab.width * 0.12f, tab.height * 0.31f);
+                        tab.AddChild(mark);
+                    }
+                }
+
+                _tabList.AddChild(tab);
+            }
+        }
+
+        private bool IsVisibleInActiveTab(ServerListZone z)
+        {
+            return _activeTab switch
+            {
+                1 => z.recommended,
+                2 => z.status == "PREVIEW" || z.status == "MAINTENANCE",
+                _ => true,
+            };
         }
 
         private static string StatusText(ServerListZone z)
@@ -204,5 +319,7 @@ namespace MmorpgClient.UI.Screens
                 _             => Theme.TextDim,
             };
         }
+
+        private static string Text(string key, string fallback) => QdaoUiText.Get(key, fallback);
     }
 }

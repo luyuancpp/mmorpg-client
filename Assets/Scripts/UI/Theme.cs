@@ -15,9 +15,17 @@ namespace MmorpgClient.UI
 
         public static class Art
         {
-            public const string Backdrop = "UI/qdao/qdao_backdrop";
+            public const float ReferenceWidth = 2560f;
+            public const float ReferenceHeight = 1080f;
+            public const string SceneBackdrop = "UI/qdao/qdao_scene_backdrop";
             public const string LoginBanner = "UI/qdao/qdao_login_banner";
             public const string ServerScroll = "UI/qdao/qdao_server_scroll";
+            public const string ServerRow = "UI/qdao/qdao_server_row";
+            public const string ServerRowAlt = "UI/qdao/qdao_server_row_alt";
+            public const string SideTab = "UI/qdao/qdao_side_tab";
+            public const string SearchBox = "UI/qdao/qdao_search_box";
+            public const string PrimaryButton = "UI/qdao/qdao_primary_button";
+            public const string BottomBar = "UI/qdao/qdao_bottom_bar";
             public const string RoleWanderer = "UI/qdao/qdao_role_wanderer";
             public const string RoleTalisman = "UI/qdao/qdao_role_talisman";
             public const string RoleSword = "UI/qdao/qdao_role_sword";
@@ -28,6 +36,7 @@ namespace MmorpgClient.UI
 
         public static class UiId
         {
+            public const string SceneBackdrop = "imgSceneBackdrop";
             public const string LoginRoot = "LoginScreen";
             public const string LoginGatewayInput = "inputGateway";
             public const string LoginAccountInput = "inputAccount";
@@ -62,21 +71,25 @@ namespace MmorpgClient.UI
             public const string HudSkillBtn = "btnSkill";
         }
 
-        public static readonly Color BgTop       = new Color(0.17f, 0.31f, 0.28f);
-        public static readonly Color BgBottom    = new Color(0.85f, 0.79f, 0.66f);
-        public static readonly Color Panel       = new Color(0.17f, 0.24f, 0.20f, 0.90f);
-        public static readonly Color PanelEdge   = new Color(0.90f, 0.82f, 0.62f, 0.92f);
-        public static readonly Color PanelInner  = new Color(0.11f, 0.16f, 0.14f, 0.86f);
-        public static readonly Color TextPrim    = new Color(0.97f, 0.93f, 0.83f);
-        public static readonly Color TextDim     = new Color(0.72f, 0.79f, 0.72f);
+        public static readonly Color BgTop = new Color(0.35f, 0.55f, 0.52f);
+        public static readonly Color BgBottom = new Color(0.89f, 0.80f, 0.58f);
+        public static readonly Color Panel = new Color(0.95f, 0.86f, 0.68f, 0.76f);
+        public static readonly Color PanelEdge = new Color(0.12f, 0.42f, 0.37f, 0.96f);
+        public static readonly Color PanelInner = new Color(1.00f, 0.95f, 0.84f, 0.64f);
+        public static readonly Color TextPrim = new Color(0.16f, 0.25f, 0.22f);
+        public static readonly Color TextDim = new Color(0.45f, 0.42f, 0.34f);
         public static readonly Color TextWarn    = new Color(0.96f, 0.50f, 0.42f);
-        public static readonly Color BtnPrim     = new Color(0.27f, 0.63f, 0.47f);
-        public static readonly Color BtnPrimLine = new Color(0.88f, 0.95f, 0.89f, 0.56f);
-        public static readonly Color BtnGhost    = new Color(0.22f, 0.30f, 0.27f, 0.92f);
-        public static readonly Color ZoneIdle    = new Color(0.19f, 0.24f, 0.25f, 0.95f);
-        public static readonly Color ZoneSel     = new Color(0.30f, 0.44f, 0.38f, 0.98f);
-        public static readonly Color Accent      = new Color(0.95f, 0.82f, 0.52f);
-        public static readonly Color AccentSoft  = new Color(0.93f, 0.88f, 0.72f, 0.34f);
+        public static readonly Color BtnPrim = new Color(0.10f, 0.50f, 0.44f);
+        public static readonly Color BtnPrimLine = new Color(0.99f, 0.94f, 0.72f, 0.76f);
+        public static readonly Color BtnGhost = new Color(0.97f, 0.90f, 0.75f, 0.74f);
+        public static readonly Color ZoneIdle = new Color(1.00f, 0.94f, 0.83f, 0.84f);
+        public static readonly Color ZoneSel = new Color(0.10f, 0.52f, 0.46f, 0.92f);
+        public static readonly Color Accent = new Color(0.78f, 0.61f, 0.28f);
+        public static readonly Color AccentSoft = new Color(1.00f, 0.96f, 0.72f, 0.45f);
+
+        public const string BodyFontName = "Microsoft YaHei UI,Microsoft YaHei,SimHei";
+        public const string TitleFontName = "STKaiti,KaiTi,STXingkai,Microsoft YaHei UI,Microsoft YaHei";
+        public const string QdaoFontName = BodyFontName;
 
         public static GComponent TryCreateFromPackage(string componentName)
         {
@@ -93,7 +106,11 @@ namespace MmorpgClient.UI
         public static GImage Image(string resourcePath, float w, float h)
         {
             var tex = Resources.Load<Texture2D>(resourcePath);
-            if (tex == null) return null;
+            if (tex == null)
+            {
+                Debug.LogWarning($"[Theme] UI texture not found: Resources/{resourcePath}");
+                return null;
+            }
 
             var img = new GImage();
             img.texture = new NTexture(tex);
@@ -110,6 +127,67 @@ namespace MmorpgClient.UI
                 img.texture = new NTexture(tex);
         }
 
+        public static GComponent ImagePanel(string resourcePath, float w, float h, bool touchable = false, System.Action onClick = null)
+        {
+            var panel = new GComponent();
+            panel.SetSize(w, h);
+            panel.touchable = touchable;
+            panel.opaque = false;
+
+            var bg = Image(resourcePath, w, h);
+            if (bg != null)
+                panel.AddChild(bg);
+
+            if (touchable)
+                panel.onClick.Add(_ => onClick?.Invoke());
+            return panel;
+        }
+
+        public static void SetArtRect(GObject obj, float rootW, float rootH, float x, float y, float w, float h)
+        {
+            float scale = Mathf.Max(rootW / Art.ReferenceWidth, rootH / Art.ReferenceHeight);
+            float offsetX = (rootW - Art.ReferenceWidth * scale) * 0.5f;
+            float offsetY = (rootH - Art.ReferenceHeight * scale) * 0.5f;
+            obj.SetXY(offsetX + x * scale, offsetY + y * scale);
+            obj.SetSize(w * scale, h * scale);
+        }
+
+        public static GTextField ArtText(string text, Color color, int size, bool bold = false, AlignType align = AlignType.Left)
+        {
+            var label = new GTextField();
+            label.text = text;
+            label.textFormat = new TextFormat
+            {
+                font = BodyFontName,
+                color = color,
+                size = size,
+                bold = bold,
+                align = align,
+                shadowOffset = new Vector2(0f, 1f),
+                shadowColor = new Color(1f, 0.96f, 0.82f, 0.28f)
+            };
+            label.verticalAlign = VertAlignType.Middle;
+            return label;
+        }
+
+        public static GTextField TitleText(string text, Color color, int size, AlignType align = AlignType.Center)
+        {
+            var label = new GTextField();
+            label.text = text;
+            label.textFormat = new TextFormat
+            {
+                font = TitleFontName,
+                color = color,
+                size = size,
+                bold = false,
+                align = align,
+                shadowOffset = new Vector2(0f, 1f),
+                shadowColor = new Color(0.08f, 0.12f, 0.10f, 0.18f)
+            };
+            label.verticalAlign = VertAlignType.Middle;
+            return label;
+        }
+
         // ── Builders (placeholder skin until .fui packages are authored) ──
 
         /// <summary>Card panel: solid fill + 1px gold edge, no .fui asset required.</summary>
@@ -117,7 +195,7 @@ namespace MmorpgClient.UI
         {
             var c = new GComponent();
             c.SetSize(w, h);
-            c.opaque = true;
+            c.opaque = false;
 
             var shadow = new GGraph();
             shadow.SetXY(6, 7);
@@ -132,6 +210,14 @@ namespace MmorpgClient.UI
             inner.SetXY(6, 6);
             inner.DrawRect(w - 12, h - 12, 1, new Color(1f, 1f, 1f, 0.08f), PanelInner);
             c.AddChild(inner);
+
+            var top = Image(Art.ServerScroll, Mathf.Min(w - 40, 680), 88);
+            if (top != null)
+            {
+                top.SetXY((w - top.width) * 0.5f, 4);
+                top.alpha = 0.92f;
+                c.AddChild(top);
+            }
 
             var corner = Image(Art.CloudCorner, 84, 84);
             if (corner != null)
@@ -152,7 +238,7 @@ namespace MmorpgClient.UI
         {
             var t = new GTextField();
             t.text = text;
-            t.textFormat = new TextFormat { color = Accent, size = 30, bold = true, align = AlignType.Left };
+            t.textFormat = new TextFormat { font = TitleFontName, color = Accent, size = 30, bold = false, align = AlignType.Left };
             t.autoSize = AutoSizeType.Both;
             return t;
         }
@@ -161,7 +247,7 @@ namespace MmorpgClient.UI
         {
             var t = new GTextField();
             t.text = text;
-            t.textFormat = new TextFormat { color = TextPrim, size = 19, bold = true, align = AlignType.Left };
+            t.textFormat = new TextFormat { font = BodyFontName, color = TextPrim, size = 19, bold = true, align = AlignType.Left };
             t.autoSize = AutoSizeType.Both;
             return t;
         }
@@ -173,6 +259,7 @@ namespace MmorpgClient.UI
             t.textFormat = new TextFormat
             {
                 color = dim ? TextDim : TextPrim,
+                font = QdaoFontName,
                 size  = 14,
                 align = AlignType.Left,
             };
@@ -186,11 +273,17 @@ namespace MmorpgClient.UI
             var btn = new GComponent();
             btn.SetSize(w, h);
             btn.touchable = true;
-            btn.opaque = true;
+            btn.opaque = false;
 
-            var bg = new GGraph();
-            bg.DrawRect(w, h, 1, BtnPrimLine, baseCol);
-            btn.AddChild(bg);
+            var bgImage = Image(Art.PrimaryButton, w, h);
+            if (bgImage != null)
+                btn.AddChild(bgImage);
+            else
+            {
+                var bg = new GGraph();
+                bg.DrawRect(w, h, 1, BtnPrimLine, baseCol);
+                btn.AddChild(bg);
+            }
 
             var shine = new GGraph();
             shine.SetXY(2, 2);
@@ -202,6 +295,7 @@ namespace MmorpgClient.UI
             label.text = text;
             label.textFormat = new TextFormat
             {
+                font = QdaoFontName,
                 color = textCol, size = 15, bold = true,
                 align = AlignType.Center,
             };
@@ -209,8 +303,8 @@ namespace MmorpgClient.UI
             btn.AddChild(label);
 
             var hover = new Color(Mathf.Min(1, baseCol.r * 1.18f), Mathf.Min(1, baseCol.g * 1.18f), Mathf.Min(1, baseCol.b * 1.18f), baseCol.a);
-            btn.onRollOver.Add(() => bg.DrawRect(w, h, 1, BtnPrimLine, hover));
-            btn.onRollOut.Add(() => bg.DrawRect(w, h, 1, BtnPrimLine, baseCol));
+            btn.onRollOver.Add(() => btn.alpha = 0.88f);
+            btn.onRollOut.Add(() => btn.alpha = 1f);
             btn.onClick.Add(_ => onClick?.Invoke());
             return btn;
         }
@@ -230,20 +324,28 @@ namespace MmorpgClient.UI
             l.SetXY(0, 7);
             l.SetSize(110, 24);
             l.text = "「" + label + "」";
-            l.textFormat = new TextFormat { color = TextDim, size = 13, align = AlignType.Left, bold = true };
+            l.textFormat = new TextFormat { font = QdaoFontName, color = TextDim, size = 13, align = AlignType.Left, bold = true };
             row.AddChild(l);
 
             var bg = new GGraph();
             bg.SetXY(112, 1);
-            bg.DrawRect(rowW - 112, 32, 1, new Color(1f, 1f, 1f, 0.24f), new Color(0.06f, 0.10f, 0.09f, 0.50f));
+            bg.DrawRect(rowW - 112, 32, 1, new Color(0.72f, 0.53f, 0.28f, 0.42f), new Color(1f, 0.96f, 0.86f, 0.72f));
             row.AddChild(bg);
+
+            var art = Image(Art.SearchBox, rowW - 112, 32);
+            if (art != null)
+            {
+                art.SetXY(112, 1);
+                art.alpha = 0.82f;
+                row.AddChild(art);
+            }
 
             var input = new GTextInput();
             input.SetXY(120, 5);
             input.SetSize(rowW - 132, 24);
             input.text = value;
             input.displayAsPassword = isPassword;
-            input.textFormat = new TextFormat { color = TextPrim, size = 14, align = AlignType.Left };
+            input.textFormat = new TextFormat { font = QdaoFontName, color = TextPrim, size = 14, align = AlignType.Left };
             row.AddChild(input);
 
             return (row, input);

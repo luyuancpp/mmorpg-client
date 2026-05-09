@@ -47,7 +47,7 @@ namespace MmorpgClient.UI
                 _cache[typeof(T)] = screen;
             }
             var root = screen.Build(_app);
-            // Stretch to host
+            // Stretch to host (always design space: 2560x1080).
             root.SetSize(_host.width, _host.height);
             root.AddRelation(_host, RelationType.Size);
             _host.AddChild(root);
@@ -59,10 +59,11 @@ namespace MmorpgClient.UI
 
         public void Tick(float dt) => Current?.Tick(dt);
 
-        /// <summary>Called when GRoot is resized so the host stretches.</summary>
+        /// <summary>Called when GRoot is resized. _host is the fixed 2560x1080
+        /// design canvas, so nothing to resize here — AppBootstrap.FitRootToScreen
+        /// handles the uniform scale + center.</summary>
         public void OnRootResize()
         {
-            _host.SetSize(GRoot.inst.width, GRoot.inst.height);
         }
     }
 }
