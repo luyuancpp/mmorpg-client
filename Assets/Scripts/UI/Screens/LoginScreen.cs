@@ -73,10 +73,6 @@ namespace MmorpgClient.UI.Screens
             if (root == null)
                 return null;
 
-            // ScreenRouter sizes us to the 2560x1080 host. Do NOT bind size to
-            // GRoot — that would re-stretch the design canvas to window pixels.
-            Theme.SetImageTexture(Theme.Find<GImage>(root, Theme.UiId.SceneBackdrop), Theme.Art.SceneBackdrop);
-
             _announceList = ReplacePackagedDynamicLayer(root, Theme.UiId.LoginAnnouncementList);
             _gatewayField = Theme.Find<GTextInput>(root, Theme.UiId.LoginGatewayInput);
             _accountField = Theme.Find<GTextInput>(root, Theme.UiId.LoginAccountInput);

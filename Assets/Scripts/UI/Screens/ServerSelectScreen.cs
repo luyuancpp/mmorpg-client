@@ -77,10 +77,6 @@ namespace MmorpgClient.UI.Screens
             if (root == null)
                 return null;
 
-            // ScreenRouter sizes us to the 2560x1080 host. Do NOT bind size to
-            // GRoot — that would re-stretch the design canvas to window pixels.
-            Theme.SetImageTexture(Theme.Find<GImage>(root, Theme.UiId.SceneBackdrop), Theme.Art.SceneBackdrop);
-
             _zoneList = ReplacePackagedDynamicLayer(root, Theme.UiId.ServerList);
             _statusLabel = Theme.Find<GTextField>(root, Theme.UiId.ServerStatus);
             _confirmBtn = Theme.Find<GComponent>(root, Theme.UiId.ServerConfirmBtn);
@@ -267,9 +263,9 @@ namespace MmorpgClient.UI.Screens
                 });
                 tab.alpha = selected ? 1f : 0.72f;
 
-                var tabBg = Theme.Image(Theme.Art.SideTab, tab.width, tab.height);
-                if (tabBg != null)
-                    tab.AddChild(tabBg);
+                var tabBg = new GGraph();
+                tabBg.DrawRect(tab.width, tab.height, 1, Theme.PanelEdge, selected ? Theme.BtnPrim : Theme.BtnGhost);
+                tab.AddChild(tabBg);
 
                 var label = new GTextField();
                 label.SetSize(tab.width, tab.height);
@@ -280,12 +276,10 @@ namespace MmorpgClient.UI.Screens
 
                 if (selected)
                 {
-                    var mark = Theme.Image(Theme.Art.IconTalisman, 26, 26);
-                    if (mark != null)
-                    {
-                        mark.SetXY(tab.width * 0.12f, tab.height * 0.31f);
-                        tab.AddChild(mark);
-                    }
+                    var mark = new GGraph();
+                    mark.SetXY(tab.width * 0.12f, tab.height * 0.31f);
+                    mark.DrawEllipse(26, 26, Theme.Accent);
+                    tab.AddChild(mark);
                 }
 
                 _tabList.AddChild(tab);

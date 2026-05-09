@@ -145,8 +145,6 @@ namespace MmorpgClient.UI.Screens
         {
             int i = Mathf.Clamp(_app.Session.RoleArchetypeIndex, 0, Archetypes.Length - 1);
             _previewSwatch?.DrawEllipse(104, 104, Tints[i]);
-            if (_previewPortrait != null)
-                Theme.SetImageTexture(_previewPortrait, i == 0 ? Theme.Art.RoleWanderer : i == 1 ? Theme.Art.RoleTalisman : Theme.Art.RoleSword);
             if (_previewLabel != null)
                 _previewLabel.text = $"{Archetypes[i]} · 武器: {Weapons[i]}";
         }

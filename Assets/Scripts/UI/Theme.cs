@@ -22,13 +22,10 @@ namespace MmorpgClient.UI
             public const string ServerScroll = "UI/qdao/qdao_server_scroll";
             public const string ServerRow = "UI/qdao/qdao_server_row";
             public const string ServerRowAlt = "UI/qdao/qdao_server_row_alt";
-            public const string SideTab = "UI/qdao/qdao_side_tab";
             public const string SearchBox = "UI/qdao/qdao_search_box";
             public const string PrimaryButton = "UI/qdao/qdao_primary_button";
             public const string BottomBar = "UI/qdao/qdao_bottom_bar";
             public const string RoleWanderer = "UI/qdao/qdao_role_wanderer";
-            public const string RoleTalisman = "UI/qdao/qdao_role_talisman";
-            public const string RoleSword = "UI/qdao/qdao_role_sword";
             public const string IconTalisman = "UI/qdao/qdao_icon_talisman";
             public const string IconGate = "UI/qdao/qdao_icon_gate";
             public const string CloudCorner = "UI/qdao/qdao_cloud_corner";
@@ -69,6 +66,20 @@ namespace MmorpgClient.UI
             public const string HudLogText = "txtLog";
             public const string HudLogoutBtn = "btnLogout";
             public const string HudSkillBtn = "btnSkill";
+
+            public const string SceneRoot = "SceneScreen";
+            public const string SceneList = "listRows";
+            public const string SceneStatus = "txtStatus";
+            public const string SceneSearchInput = "inputSearch";
+            public const string SceneTitle = "txtPanelTitle";
+            public const string SceneTabRecent = "tabRecent";
+            public const string SceneTabRecommend = "tabRecommend";
+            public const string SceneTabAll = "tabAll";
+            public const string SceneScrollUpBtn = "btnScrollUp";
+            public const string SceneScrollDownBtn = "btnScrollDown";
+            public const string SceneBackBtn = "btnBack";
+            public const string SceneRefreshBtn = "btnRefresh";
+            public const string SceneConfirmBtn = "btnConfirm";
         }
 
         public static readonly Color BgTop = new Color(0.35f, 0.55f, 0.52f);

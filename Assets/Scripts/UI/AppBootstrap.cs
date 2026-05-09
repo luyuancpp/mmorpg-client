@@ -42,6 +42,7 @@ namespace MmorpgClient.UI
 
             EnsureSceneRig();
             EnsureFairyGUIStage();
+            ExcludeFairyGuiLayerFromWorldCameras();
             TryLoadUiPackage();
 
             Session    = new SessionModel();
@@ -169,6 +170,19 @@ namespace MmorpgClient.UI
                 light.type = LightType.Directional;
                 light.intensity = 1.1f;
                 lightGo.transform.rotation = Quaternion.Euler(40f, 30f, 0f);
+            }
+        }
+
+        private static void ExcludeFairyGuiLayerFromWorldCameras()
+        {
+            int uiLayer = LayerMask.NameToLayer(StageCamera.LayerName);
+            if (uiLayer < 0) return;
+
+            int uiMask = 1 << uiLayer;
+            foreach (var camera in FindObjectsByType<Camera>(FindObjectsSortMode.None))
+            {
+                if (camera == null || camera.GetComponent<StageCamera>() != null) continue;
+                camera.cullingMask &= ~uiMask;
             }
         }
     }
