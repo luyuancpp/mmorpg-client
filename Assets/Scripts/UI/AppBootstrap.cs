@@ -36,9 +36,6 @@ namespace MmorpgClient.UI
 
         private GComponent _root;
         private GComponent _host;
-        private GGraph     _backdropTop;
-        private GGraph     _backdropBottom;
-
         private void Awake()
         {
             Debug.Log("[AppBootstrap] Awake (FairyGUI mode)");
@@ -56,7 +53,9 @@ namespace MmorpgClient.UI
             Router = new ScreenRouter(this, _host);
             GRoot.inst.onSizeChanged.Add(OnRootResize);
 
-            Router.Show<LoginScreen>();
+            // Boot into SceneScreen (qdao FairyGUI roster). Switch to
+            // Router.Show<LoginScreen>() if you want the login flow first.
+            Router.Show<SceneScreen>();
         }
 
         private void Update()
@@ -120,15 +119,6 @@ namespace MmorpgClient.UI
             _root = new GComponent();
             _root.SetSize(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight);
             GRoot.inst.AddChild(_root);
-
-            _backdropTop = new GGraph();
-            _backdropTop.DrawRect(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight * 0.52f, 0, Color.clear, Theme.BgTop);
-            _root.AddChild(_backdropTop);
-
-            _backdropBottom = new GGraph();
-            _backdropBottom.SetXY(0, Theme.Art.ReferenceHeight * 0.52f);
-            _backdropBottom.DrawRect(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight * 0.48f, 0, Color.clear, Theme.BgBottom);
-            _root.AddChild(_backdropBottom);
 
             _host = new GComponent();
             _host.SetSize(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight);
