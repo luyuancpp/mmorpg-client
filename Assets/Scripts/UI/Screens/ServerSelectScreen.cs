@@ -104,6 +104,16 @@ namespace MmorpgClient.UI.Screens
                 Theme.FillList(_tabList, Theme.ItemUrl.TabItem, Theme.ItemUrl.TabItemById, Tabs.Length, RenderTabItem);
                 if (_tabList.numChildren > 0)
                     _tabList.selectedIndex = Mathf.Clamp(_activeTab, 0, _tabList.numChildren - 1);
+
+                // The tab list is sized to fit all entries - lock any scrollPane
+                // so the list never drifts on open.
+                if (_tabList.scrollPane != null)
+                {
+                    _tabList.scrollPane.SetPosX(0f, false);
+                    _tabList.scrollPane.SetPosY(0f, false);
+                    _tabList.scrollPane.touchEffect = false;
+                    _tabList.scrollPane.bouncebackEffect = false;
+                }
             }
 
             // Zone list - filled in Rebind() once data arrives

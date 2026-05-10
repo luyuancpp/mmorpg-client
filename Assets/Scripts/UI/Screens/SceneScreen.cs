@@ -90,6 +90,18 @@ namespace MmorpgClient.UI.Screens
                 Theme.FillList(_tabList, Theme.ItemUrl.TabItem, Theme.ItemUrl.TabItemById, Tabs.Length, RenderTabItem);
                 if (_tabList.numChildren > 0)
                     _tabList.selectedIndex = Mathf.Clamp(_activeTab, 0, _tabList.numChildren - 1);
+
+                // The tab list is sized to fit all 6 entries — there should be
+                // no scrolling. If FairyGUI built a ScrollPane anyway (because
+                // overflow != "visible" in the published bytes), pin it to 0,0
+                // and disable inertia so the open animation never drifts.
+                if (_tabList.scrollPane != null)
+                {
+                    _tabList.scrollPane.SetPosX(0f, false);
+                    _tabList.scrollPane.SetPosY(0f, false);
+                    _tabList.scrollPane.touchEffect = false;
+                    _tabList.scrollPane.bouncebackEffect = false;
+                }
             }
 
             if (_zoneList != null)
