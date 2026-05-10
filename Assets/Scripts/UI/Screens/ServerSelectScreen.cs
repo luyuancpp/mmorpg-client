@@ -1,7 +1,8 @@
+using System;
 using System.Collections;
 using FairyGUI;
-using MmorpgClient.UI;
 using MmorpgClient.Net;
+using MmorpgClient.UI;
 using UnityEngine;
 
 namespace MmorpgClient.UI.Screens
@@ -9,136 +10,136 @@ namespace MmorpgClient.UI.Screens
     /// <summary>
     /// Pulls the zone list from the Java gateway and lets the user pick one.
     /// On confirm, advances to <see cref="RoleCreateScreen"/>.
+    ///
+    /// All visuals come from the qdao FairyGUI package; this class only binds
+    /// named children and feeds the two GLists (left filter tabs + center zone
+    /// rows) from <see cref="SessionModel"/>.
     /// </summary>
     public sealed class ServerSelectScreen : IScreen
     {
-        private static readonly (string key, string fallback)[] ZoneTabs =
+        // Filter tabs in left column. Order matches default item order in
+        // SceneScreen.xml / ServerSelectScreen.xml `listTabs`.
+        private static readonly TabSpec[] Tabs =
         {
-            ("server.tab.mine", "我的角色"),
-            ("server.tab.recommend", "推荐区服"),
-            ("server.tab.preview", "预告专区"),
-            ("server.tab.all", "全部区服"),
+            new(0, "近期",  z => z.recommended || z.is_new),
+            new(1, "推荐",  z => z.recommended),
+            new(2, "全部",  _ => true),
+            new(3, "新服",  z => z.is_new),
+            new(4, "官方",  _ => true),
+            new(5, "合服",  z => string.Equals(z.status, "MERGED", StringComparison.OrdinalIgnoreCase)),
+            new(6, "测试",  z => string.Equals(z.status, "PREVIEW", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(z.status, "MAINTENANCE", StringComparison.OrdinalIgnoreCase)),
+            new(7, "海外",  _ => false),
         };
 
+        private readonly struct TabSpec
+        {
+            public readonly int Index;
+            public readonly string Label;
+            public readonly Func<ServerListZone, bool> Match;
+            public TabSpec(int idx, string label, Func<ServerListZone, bool> match)
+            { Index = idx; Label = label; Match = match; }
+        }
+
         private AppBootstrap _app;
-        private GComponent _tabList;
-        private GComponent _zoneList;
+        private GList _tabList;
+        private GList _zoneList;
         private GTextField _statusLabel;
-        private GComponent _confirmBtn;
+        private GButton _confirmBtn;
         private bool _loading;
-        private int _activeTab = 1;
+        private int  _activeTab = 1;       // default to "推荐"
+        private int  _selectedVisibleIndex = -1;
+        private readonly System.Collections.Generic.List<int> _visibleZoneIndices = new();
 
         public GComponent Build(AppBootstrap app)
         {
             _app = app;
-
             var packagedRoot = BuildFromPackage(app);
-            if (packagedRoot != null)
-                return packagedRoot;
+            if (packagedRoot != null) return packagedRoot;
 
+            // Fallback: package missing -> minimal placeholder.
             var root = new GComponent();
-            root.SetSize(GRoot.inst.width, GRoot.inst.height);
-
-            _tabList = new GComponent();
-            _tabList.SetSize(root.width, root.height);
-            root.AddChild(_tabList);
-
-            _zoneList = new GComponent();
-            _zoneList.SetSize(root.width, root.height);
-            root.AddChild(_zoneList);
-
-            _statusLabel = Theme.ArtText("", Theme.TextDim, 18, false, AlignType.Center);
-            Theme.SetArtRect(_statusLabel, root.width, root.height, 1120, 910, 520, 34);
-            root.AddChild(_statusLabel);
-
-            _confirmBtn = AddHitButton(root, 1722, 866, 154, 65, OnConfirm);
-            _confirmBtn.touchable = false;
-            _confirmBtn.alpha = 0.5f;
-
-            AddHitButton(root, 1490, 872, 170, 50, () => _app.Run(LoadZones()));
-            AddHitButton(root, 1300, 872, 150, 50, () => _app.Router.Show<LoginScreen>());
-
+            root.SetSize(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight);
+            var warn = Theme.ArtText("ServerSelectScreen package missing — open qdao.fairy and republish.",
+                                     Theme.TextWarn, 28, true, AlignType.Center);
+            warn.SetSize(root.width, root.height);
+            warn.verticalAlign = VertAlignType.Middle;
+            root.AddChild(warn);
             return root;
-        }
-
-        private static GComponent AddHitButton(GComponent root, float x, float y, float w, float h, System.Action onClick)
-        {
-            var btn = new GComponent();
-            btn.touchable = true;
-            Theme.SetArtRect(btn, root.width, root.height, x, y, w, h);
-            btn.onClick.Add(_ => onClick?.Invoke());
-            root.AddChild(btn);
-            return btn;
         }
 
         private GComponent BuildFromPackage(AppBootstrap app)
         {
             var root = Theme.TryCreateFromPackage(Theme.UiId.ServerRoot);
-            if (root == null)
-                return null;
+            if (root == null) return null;
 
-            _zoneList = ReplacePackagedDynamicLayer(root, Theme.UiId.ServerList);
+            _tabList     = Theme.Find<GList>(root,      Theme.UiId.ServerTabList);
+            _zoneList    = Theme.Find<GList>(root,      Theme.UiId.ServerList);
             _statusLabel = Theme.Find<GTextField>(root, Theme.UiId.ServerStatus);
-            _confirmBtn = Theme.Find<GComponent>(root, Theme.UiId.ServerConfirmBtn);
-
-            _tabList = new GComponent();
-            _tabList.SetSize(root.width, root.height);
-            root.AddChild(_tabList);
+            _confirmBtn  = Theme.Find<GButton>(root,    Theme.UiId.ServerConfirmBtn);
 
             var btnRefresh = Theme.Find<GButton>(root, Theme.UiId.ServerRefreshBtn);
-            var btnBack = Theme.Find<GButton>(root, Theme.UiId.ServerBackBtn);
+            var btnBack    = Theme.Find<GButton>(root, Theme.UiId.ServerBackBtn);
 
-            if (_zoneList == null || _statusLabel == null || _confirmBtn == null || btnRefresh == null || btnBack == null)
+            if (_tabList == null || _zoneList == null || _statusLabel == null
+                || _confirmBtn == null || btnRefresh == null || btnBack == null)
             {
-                Debug.LogWarning("[ServerSelectScreen] FairyGUI ServerSelectScreen component is missing required children; fallback to code UI.");
+                Debug.LogWarning("[ServerSelectScreen] FairyGUI ServerSelectScreen is missing required children; check qdao package.");
                 root.Dispose();
                 return null;
             }
 
-            _confirmBtn.touchable = false;
-            _confirmBtn.alpha = 0.5f;
-            if (_confirmBtn is GButton confirmButton)
+            // Hide the static placeholder shortcut tabs (n6/n7/n8 in XML) — the
+            // real tab strip comes from the GList. They exist only to satisfy
+            // legacy Theme.UiId.SceneTabRecent/Recommend/All references.
+            HideIfPresent(root, Theme.UiId.SceneTabRecent);
+            HideIfPresent(root, Theme.UiId.SceneTabRecommend);
+            HideIfPresent(root, Theme.UiId.SceneTabAll);
+
+            // Tab list - explicit URL avoids any defaultItem resolution issues
+            if (_tabList != null)
             {
-                confirmButton.onClick.Add(_ => OnConfirm());
-            }
-            else
-            {
-                _confirmBtn.onClick.Add(_ => OnConfirm());
+                _tabList.selectionMode = ListSelectionMode.Single;
+                _tabList.onClickItem.Add(OnTabClicked);
+                Theme.FillList(_tabList, Theme.ItemUrl.TabItem, Theme.ItemUrl.TabItemById, Tabs.Length, RenderTabItem);
+                if (_tabList.numChildren > 0)
+                    _tabList.selectedIndex = Mathf.Clamp(_activeTab, 0, _tabList.numChildren - 1);
             }
 
+            // Zone list - filled in Rebind() once data arrives
+            if (_zoneList != null)
+            {
+                _zoneList.RemoveChildrenToPool();
+                _zoneList.itemRenderer = RenderZoneItem;
+                _zoneList.selectionMode = ListSelectionMode.Single;
+                _zoneList.onClickItem.Add(OnZoneClicked);
+            }
+
+            // CTA buttons
+            _confirmBtn.onClick.Add(_ => OnConfirm());
             btnRefresh.onClick.Add(_ => _app.Run(LoadZones()));
             btnBack.onClick.Add(_ => _app.Router.Show<LoginScreen>());
+
+            UpdateConfirmEnabled(false);
             return root;
         }
 
-        private static GComponent ReplacePackagedDynamicLayer(GComponent root, string childName)
+        private static void HideIfPresent(GComponent root, string childName)
         {
-            var oldLayer = root.GetChild(childName);
-            var index = oldLayer != null ? root.GetChildIndex(oldLayer) : root.numChildren;
-            if (oldLayer != null)
-                root.RemoveChild(oldLayer, true);
-
-            var layer = new GComponent { name = childName };
-            layer.SetSize(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight);
-            layer.touchable = true;
-            root.AddChildAt(layer, index);
-            return layer;
+            var go = root.GetChild(childName);
+            if (go != null) go.visible = false;
         }
 
         public void OnEnter()
         {
             if (_app.Session.Zones.Count == 0 && !_loading) _app.Run(LoadZones());
-            else Rebuild();
+            else Rebind();
         }
 
         public void OnExit() { }
         public void Tick(float dt) { }
 
-        private void OnConfirm()
-        {
-            if (_app.Session.SelectedZone == null) return;
-            _app.Router.Show<RoleCreateScreen>();
-        }
+        // ── Data fetch ────────────────────────────────────────────────
 
         private IEnumerator LoadZones()
         {
@@ -150,169 +151,167 @@ namespace MmorpgClient.UI.Screens
                     _app.Session.Zones.Clear();
                     if (resp?.zones != null) _app.Session.Zones.AddRange(resp.zones);
                     if (_app.Session.SelectedZoneIndex < 0 && _app.Session.Zones.Count > 0)
-                        _app.Session.SelectedZoneIndex = 0;
-                    Rebuild();
-                    _statusLabel.text = string.Format(Text("server.count", "共 {0} 个区服"), _app.Session.Zones.Count);
+                        _app.Session.SelectedZoneIndex = FirstVisibleZoneIndex();
+                    Rebind();
+                    _statusLabel.text = string.Format(
+                        Text("server.count", "共 {0} 个区服"), _app.Session.Zones.Count);
                 },
-                err => _statusLabel.text = string.Format(Text("server.error", "区服获取失败: {0}"), err));
+                err =>
+                {
+                    Rebind();
+                    _statusLabel.text = string.Format(
+                        Text("server.error", "区服获取失败: {0}"), err);
+                });
             _loading = false;
         }
 
-        private void Rebuild()
-        {
-            RebuildTabs();
-            _zoneList.RemoveChildren(0, -1, true);
+        // ── Rebind (called whenever data or active tab changes) ──────
 
-            var rowSlots = new (float x, float y)[]
-            {
-                (955, 315), (1455, 315),
-                (955, 447), (1455, 447),
-                (955, 580), (1455, 580),
-                (955, 713), (1455, 713),
-            };
-            const float cellW = 467f, rowH = 97f;
-            int visibleIndex = 0;
+        private void Rebind()
+        {
+            if (_zoneList == null) return;
+
+            _visibleZoneIndices.Clear();
+            var match = Tabs[_activeTab].Match;
             for (int i = 0; i < _app.Session.Zones.Count; i++)
             {
-                var z = _app.Session.Zones[i];
-                if (!IsVisibleInActiveTab(z)) continue;
-                if (visibleIndex >= rowSlots.Length) break;
-
-                int idx = i;
-                bool selected = (idx == _app.Session.SelectedZoneIndex);
-                var slot = rowSlots[visibleIndex];
-                var row = new GComponent();
-                row.touchable = true;
-                Theme.SetArtRect(row, _zoneList.width, _zoneList.height, slot.x, slot.y, cellW, rowH);
-                row.onClick.Add(_ =>
-                {
-                    _app.Session.SelectedZoneIndex = idx;
-                    Rebuild();
-                });
-
-                var rowBg = Theme.Image(visibleIndex % 2 == 0 ? Theme.Art.ServerRow : Theme.Art.ServerRowAlt, row.width, row.height);
-                if (rowBg != null)
-                    row.AddChild(rowBg);
-
-                if (selected)
-                {
-                    var selectedGlow = new GGraph();
-                    selectedGlow.DrawRect(row.width, row.height, 2, Theme.PanelEdge, new Color(0.18f, 0.62f, 0.52f, 0.18f));
-                    row.AddChild(selectedGlow);
-                }
-
-                var name = new GTextField();
-                name.SetXY(row.width * 0.16f, row.height * 0.24f);
-                name.SetSize(row.width * 0.56f, row.height * 0.28f);
-                name.text = z.name;
-                name.textFormat = new TextFormat { font = Theme.BodyFontName, color = Theme.TextPrim, size = 15, bold = true, align = AlignType.Left };
-                row.AddChild(name);
-
-                var status = new GTextField();
-                status.SetXY(row.width * 0.16f, row.height * 0.55f);
-                status.SetSize(row.width * 0.56f, row.height * 0.24f);
-                status.text = $"#{z.zone_id}  {StatusText(z)}";
-                status.textFormat = new TextFormat { font = Theme.BodyFontName, color = StatusColor(z), size = 12 };
-                row.AddChild(status);
-
-                if (z.recommended)
-                {
-                    var badge = new GComponent();
-                    badge.SetSize(row.width * 0.13f, row.height * 0.24f);
-                    badge.SetXY(row.width * 0.78f, row.height * 0.12f);
-                    var bg = new GGraph();
-                    bg.DrawRect(badge.width, badge.height, 0, Color.clear, Theme.Accent);
-                    badge.AddChild(bg);
-                    var bt = new GTextField();
-                    bt.SetSize(badge.width, badge.height);
-                    bt.text = Text("server.recommended", "推荐");
-                    bt.textFormat = new TextFormat { font = Theme.BodyFontName, color = Color.black, size = 12, bold = true, align = AlignType.Center };
-                    bt.verticalAlign = VertAlignType.Middle;
-                    badge.AddChild(bt);
-                    row.AddChild(badge);
-                }
-                _zoneList.AddChild(row);
-                visibleIndex++;
+                if (match(_app.Session.Zones[i])) _visibleZoneIndices.Add(i);
             }
 
-            if (visibleIndex == 0)
+            _selectedVisibleIndex = -1;
+            int sel = _app.Session.SelectedZoneIndex;
+            for (int v = 0; v < _visibleZoneIndices.Count; v++)
             {
-                var text = Theme.ArtText(Text("server.empty", "当前分类暂无区服"), Theme.TextDim, 18, false, AlignType.Center);
-                Theme.SetArtRect(text, _zoneList.width, _zoneList.height, 1050, 500, 760, 48);
-                _zoneList.AddChild(text);
+                if (_visibleZoneIndices[v] == sel) { _selectedVisibleIndex = v; break; }
             }
-            bool can = _app.Session.SelectedZone != null && IsVisibleInActiveTab(_app.Session.SelectedZone);
-            _confirmBtn.touchable = can;
-            _confirmBtn.alpha = can ? 1f : 0.5f;
+
+            int actual = Theme.FillList(_zoneList, Theme.ItemUrl.ServerRow, Theme.ItemUrl.ServerRowById,
+                                        _visibleZoneIndices.Count, RenderZoneItem);
+            if (actual > 0 && _selectedVisibleIndex >= 0 && _selectedVisibleIndex < actual)
+                _zoneList.selectedIndex = _selectedVisibleIndex;
+
+            UpdateConfirmEnabled(_selectedVisibleIndex >= 0);
+
+            if (_visibleZoneIndices.Count == 0 && !_loading)
+                _statusLabel.text = Text("server.empty", "当前分类暂无区服");
         }
 
-        private void RebuildTabs()
+        // ── Per-row renderers ────────────────────────────────────────
+
+        private void RenderTabItem(int index, GObject item)
         {
-            _tabList.RemoveChildren(0, -1, true);
-            for (int i = 0; i < ZoneTabs.Length; i++)
+            if (item is not GComponent row) return;
+            var title = row.GetChild(Theme.UiId.ServerRowTitle) as GTextField;
+            if (title != null) title.text = Tabs[index].Label;
+
+            // Toggle the row's "checked" controller (defined on QdaoTabItem) so
+            // selected vs unselected art switches without code redrawing.
+            var ctrl = row.GetController(Theme.UiId.ServerRowCheckCtrl);
+            if (ctrl != null) ctrl.selectedIndex = (index == _activeTab) ? 1 : 0;
+        }
+
+        private void RenderZoneItem(int index, GObject item)
+        {
+            if (item is not GComponent row) return;
+            if (index < 0 || index >= _visibleZoneIndices.Count) return;
+
+            var z = _app.Session.Zones[_visibleZoneIndices[index]];
+
+            var title    = row.GetChild(Theme.UiId.ServerRowTitle)    as GTextField;
+            var subtitle = row.GetChild(Theme.UiId.ServerRowSubtitle) as GTextField;
+            var badge    = row.GetChild(Theme.UiId.ServerRowBadge)    as GTextField;
+            var icon     = row.GetChild(Theme.UiId.ServerRowIcon)     as GLoader;
+
+            if (title != null) title.text = $"#{z.zone_id}  {z.name}";
+            if (subtitle != null) subtitle.text = ZoneSubtitle(z);
+            if (badge != null)
             {
-                int idx = i;
-                bool selected = _activeTab == idx;
-                var tab = new GComponent();
-                tab.touchable = true;
-                Theme.SetArtRect(tab, _tabList.width, _tabList.height, 646, 363 + i * 74, 240, 68);
-                tab.onClick.Add(_ =>
-                {
-                    _activeTab = idx;
-                    Rebuild();
-                });
-                tab.alpha = selected ? 1f : 0.72f;
-
-                var tabBg = new GGraph();
-                tabBg.DrawRect(tab.width, tab.height, 1, Theme.PanelEdge, selected ? Theme.BtnPrim : Theme.BtnGhost);
-                tab.AddChild(tabBg);
-
-                var label = new GTextField();
-                label.SetSize(tab.width, tab.height);
-                label.text = Text(ZoneTabs[i].key, ZoneTabs[i].fallback);
-                label.textFormat = new TextFormat { font = Theme.BodyFontName, color = selected ? Color.white : Theme.TextPrim, size = 14, bold = true, align = AlignType.Center };
-                label.verticalAlign = VertAlignType.Middle;
-                tab.AddChild(label);
-
-                if (selected)
-                {
-                    var mark = new GGraph();
-                    mark.SetXY(tab.width * 0.12f, tab.height * 0.31f);
-                    mark.DrawEllipse(26, 26, Theme.Accent);
-                    tab.AddChild(mark);
-                }
-
-                _tabList.AddChild(tab);
+                if (z.recommended)        badge.text = Text("server.recommended", "推荐");
+                else if (z.is_new)        badge.text = Text("server.new", "新");
+                else if (string.Equals(z.status, "MAINTENANCE", StringComparison.OrdinalIgnoreCase))
+                    badge.text = Text("server.maint", "维护");
+                else                      badge.text = "";
+                badge.color = ZoneBadgeColor(z);
             }
+            if (icon != null)
+                icon.url = z.recommended ? "ui://qdao2026/qdao_icon_gate"
+                                         : "ui://qdao2026/qdao_icon_talisman";
+
+            // Red-dot controller on QdaoServerRow (page 0 hidden, 1 visible)
+            var dot = row.GetController(Theme.UiId.ServerRowDotCtrl);
+            if (dot != null) dot.selectedIndex = z.is_new ? 1 : 0;
+
+            // Checked state for selected highlight
+            var checkedCtrl = row.GetController(Theme.UiId.ServerRowCheckCtrl);
+            if (checkedCtrl != null) checkedCtrl.selectedIndex = (index == _selectedVisibleIndex) ? 1 : 0;
         }
 
-        private bool IsVisibleInActiveTab(ServerListZone z)
+        // ── Click handlers ───────────────────────────────────────────
+
+        private void OnTabClicked(EventContext ctx)
         {
-            return _activeTab switch
-            {
-                1 => z.recommended,
-                2 => z.status == "PREVIEW" || z.status == "MAINTENANCE",
-                _ => true,
-            };
+            int idx = _tabList.GetChildIndex(ctx.data as GObject);
+            if (idx < 0 || idx >= Tabs.Length) return;
+            if (idx == _activeTab) return;
+            _activeTab = idx;
+            Rebind();
         }
 
-        private static string StatusText(ServerListZone z)
+        private void OnZoneClicked(EventContext ctx)
         {
-            string s = string.IsNullOrEmpty(z.status) ? "OPEN" : z.status;
-            string l = string.IsNullOrEmpty(z.load_level) ? "" : "·" + z.load_level;
-            return s + l;
+            int visibleIdx = _zoneList.GetChildIndex(ctx.data as GObject);
+            if (visibleIdx < 0 || visibleIdx >= _visibleZoneIndices.Count) return;
+            int sessionIdx = _visibleZoneIndices[visibleIdx];
+            if (sessionIdx == _app.Session.SelectedZoneIndex && visibleIdx == _selectedVisibleIndex)
+                return;
+
+            _app.Session.SelectedZoneIndex = sessionIdx;
+            _selectedVisibleIndex = visibleIdx;
+
+            // Refresh row highlight without full rebuild
+            for (int i = 0; i < _zoneList.numChildren; i++)
+                RenderZoneItem(i, _zoneList.GetChildAt(i));
+
+            UpdateConfirmEnabled(true);
         }
 
-        private static UnityEngine.Color StatusColor(ServerListZone z)
+        private void OnConfirm()
         {
-            return z.status switch
-            {
-                "MAINTENANCE" => Theme.TextWarn,
-                "CLOSED"      => Theme.TextWarn,
-                "PREVIEW"     => Theme.Accent,
-                _             => Theme.TextDim,
-            };
+            if (_app.Session.SelectedZone == null) return;
+            _app.Router.Show<RoleCreateScreen>();
         }
+
+        // ── Helpers ──────────────────────────────────────────────────
+
+        private void UpdateConfirmEnabled(bool enabled)
+        {
+            if (_confirmBtn == null) return;
+            _confirmBtn.touchable = enabled;
+            _confirmBtn.alpha = enabled ? 1f : 0.5f;
+        }
+
+        private int FirstVisibleZoneIndex()
+        {
+            var match = Tabs[_activeTab].Match;
+            for (int i = 0; i < _app.Session.Zones.Count; i++)
+                if (match(_app.Session.Zones[i])) return i;
+            return _app.Session.Zones.Count > 0 ? 0 : -1;
+        }
+
+        private static string ZoneSubtitle(ServerListZone z)
+        {
+            string status = string.IsNullOrEmpty(z.status) ? "OPEN" : z.status;
+            string load   = string.IsNullOrEmpty(z.load_level) ? "" : "  人气 " + z.load_level;
+            return status + load;
+        }
+
+        private static Color ZoneBadgeColor(ServerListZone z) => z.status switch
+        {
+            "MAINTENANCE" => Theme.TextWarn,
+            "CLOSED"      => Theme.TextWarn,
+            "PREVIEW"     => Theme.Accent,
+            _             => new Color(0.61f, 0.17f, 0.10f),
+        };
 
         private static string Text(string key, string fallback) => QdaoUiText.Get(key, fallback);
     }

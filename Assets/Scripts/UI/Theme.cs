@@ -13,6 +13,22 @@ namespace MmorpgClient.UI
         public const string UiPackageName = "qdao";
         public const string UiPackagePath = "UI/qdao/qdao";
 
+        /// <summary>Item URLs published from the qdao FairyGUI package.</summary>
+        public static class ItemUrl
+        {
+            public const string TabItem      = "ui://qdao2026/QdaoTabItem";
+            public const string ServerRow    = "ui://qdao2026/QdaoServerRow";
+            public const string AnnounceItem = "ui://qdao2026/QdaoAnnounceItem";
+            public const string IconGate     = "ui://qdao2026/qdao_icon_gate";
+            public const string IconTalisman = "ui://qdao2026/qdao_icon_talisman";
+
+            // Fallback: by-id URLs in case the publish output stripped names.
+            // ids come from package.xml in client/fairygui/qdao/assets/qdao/.
+            public const string TabItemById      = "ui://qdao2026a000000m";
+            public const string ServerRowById    = "ui://qdao2026a000000l";
+            public const string AnnounceItemById = "ui://qdao2026a000000n";
+        }
+
         public static class Art
         {
             public const float ReferenceWidth = 2560f;
@@ -43,12 +59,28 @@ namespace MmorpgClient.UI
             public const string LoginEnterBtn = "btnEnter";
             public const string LoginRefreshBtn = "btnRefresh";
 
+            // Per-row child names inside the announcement list item.
+            // QdaoTabItem (current placeholder) only has `title`; richer
+            // QdaoAnnounceItem (when added) also exposes `subtitle`.
+            public const string AnnounceItemTitle    = "title";
+            public const string AnnounceItemSubtitle = "subtitle";
+
             public const string ServerRoot = "ServerSelectScreen";
             public const string ServerList = "listServer";
+            public const string ServerTabList = "listTabs";
+            public const string ServerSearchInput = "inputSearch";
             public const string ServerStatus = "txtStatus";
             public const string ServerConfirmBtn = "btnConfirm";
             public const string ServerRefreshBtn = "btnRefresh";
             public const string ServerBackBtn = "btnBack";
+
+            // Per-row child names inside QdaoServerRow (see common/QdaoServerRow.xml)
+            public const string ServerRowTitle    = "title";
+            public const string ServerRowIcon     = "icon";
+            public const string ServerRowSubtitle = "subtitle";
+            public const string ServerRowBadge    = "rightLabel";
+            public const string ServerRowDotCtrl  = "dot";
+            public const string ServerRowCheckCtrl = "checked";
 
             public const string RoleRoot = "RoleCreateScreen";
             public const string RoleNickInput = "inputNick";
@@ -69,6 +101,7 @@ namespace MmorpgClient.UI
 
             public const string SceneRoot = "SceneScreen";
             public const string SceneList = "listRows";
+            public const string SceneTabList = "listTabs";
             public const string SceneStatus = "txtStatus";
             public const string SceneSearchInput = "inputSearch";
             public const string SceneTitle = "txtPanelTitle";
@@ -112,6 +145,65 @@ namespace MmorpgClient.UI
         {
             if (root == null || string.IsNullOrEmpty(childName)) return null;
             return root.GetChild(childName) as T;
+        }
+
+        public static int FillList(GList list, string itemUrl, int count, ListItemRenderer renderer = null)
+        {
+            return FillList(list, itemUrl, null, count, renderer);
+        }
+
+        /// <summary>
+        /// Populate a non-virtual GList. Tries <paramref name="itemUrl"/> (by
+        /// name) first; if that resource is not registered in the loaded
+        /// package, falls back to <paramref name="fallbackUrl"/> (by id).
+        /// Pre-checks UIPackage so we never pass null to GList.AddChild
+        /// (which would NRE inside FairyGUI). Returns actual added count.
+        /// </summary>
+        public static int FillList(GList list, string itemUrl, string fallbackUrl,
+                                   int count, ListItemRenderer renderer = null)
+        {
+            if (list == null) return 0;
+            list.RemoveChildrenToPool();
+            if (count <= 0) return 0;
+
+            // Pre-flight: verify the URL resolves; try fallback if not.
+            string resolvedUrl = itemUrl;
+            var probe = !string.IsNullOrEmpty(itemUrl) ? UIPackage.CreateObjectFromURL(itemUrl) : null;
+            if (probe == null && !string.IsNullOrEmpty(fallbackUrl))
+            {
+                probe = UIPackage.CreateObjectFromURL(fallbackUrl);
+                if (probe != null)
+                {
+                    Debug.LogWarning($"[Theme.FillList] by-name URL '{itemUrl}' missing, " +
+                                     $"using fallback by-id URL '{fallbackUrl}'.");
+                    resolvedUrl = fallbackUrl;
+                }
+            }
+            if (probe == null)
+            {
+                Debug.LogError($"[Theme.FillList] item URL not found in any loaded package: " +
+                               $"name='{itemUrl}' id='{fallbackUrl ?? "(none)"}'. " +
+                               $"Republish the qdao FairyGUI package and confirm the component is exported.");
+                return 0;
+            }
+
+            list.AddChild(probe);
+            int added = 1;
+            for (int i = 1; i < count; i++)
+            {
+                var item = UIPackage.CreateObjectFromURL(resolvedUrl);
+                if (item == null) break;
+                list.AddChild(item);
+                added++;
+            }
+
+            if (renderer != null)
+            {
+                list.itemRenderer = renderer;
+                for (int i = 0; i < added; i++)
+                    renderer(i, list.GetChildAt(i));
+            }
+            return added;
         }
 
         public static GImage Image(string resourcePath, float w, float h)
