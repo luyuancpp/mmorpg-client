@@ -54,9 +54,11 @@ namespace MmorpgClient.UI
             Router = new ScreenRouter(this, _host);
             GRoot.inst.onSizeChanged.Add(OnRootResize);
 
-            // Boot into SceneScreen (qdao FairyGUI roster). Switch to
-            // Router.Show<LoginScreen>() if you want the login flow first.
-            Router.Show<SceneScreen>();
+            // Boot into ServerSelectScreen to validate the new three-layer
+            // qdao layout (scene_bg + ui_overlay + controls). Switch to
+            // Router.Show<LoginScreen>() once the login flow is rewired,
+            // or Router.Show<SceneScreen>() for the older roster screen.
+            Router.Show<ServerSelectScreen>();
         }
 
         private void Update()
