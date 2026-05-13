@@ -23,34 +23,34 @@ namespace MmorpgClient.UI.Screens
         // Inline tab data — keep in sync with ServerSelectScreen.xml
         private static readonly (string label, string iconUrl)[] Tabs =
         {
-            ("近期", "ui://qdao2026/icon_alt_left_tab_icon_1.png"),
-            ("推荐", "ui://qdao2026/icon_alt_left_tab_icon_2.png"),
-            ("全部", "ui://qdao2026/icon_alt_left_tab_icon_3.png"),
-            ("新服", "ui://qdao2026/icon_alt_left_tab_icon_4.png"),
-            ("官方", "ui://qdao2026/icon_category_yinyang.png"),
-            ("海外", "ui://qdao2026/icon_category_swirl.png"),
+            ("近期", "ui://qdao/icon_alt_left_tab_icon_1.png"),
+            ("推荐", "ui://qdao/icon_alt_left_tab_icon_2.png"),
+            ("全部", "ui://qdao/icon_alt_left_tab_icon_3.png"),
+            ("新服", "ui://qdao/icon_alt_left_tab_icon_4.png"),
+            ("官方", "ui://qdao/icon_category_yinyang.png"),
+            ("海外", "ui://qdao/icon_category_swirl.png"),
         };
 
         // Inline server data — same names as the FUI item list, since the
         // gateway-side zone fetch isn't wired here yet.
         private static readonly (string name, string badgeUrl)[] Servers =
         {
-            ("云海宗", "ui://qdao2026/icon_server_badge_pavilion.png"),
-            ("清风谷", "ui://qdao2026/icon_server_badge_pagoda.png"),
-            ("碧落渊", "ui://qdao2026/icon_server_badge_sword.png"),
-            ("紫霄峰", "ui://qdao2026/icon_server_badge_whirlpool.png"),
-            ("沧浪洲", "ui://qdao2026/icon_server_badge_yinyang.png"),
-            ("昆仑墟", "ui://qdao2026/icon_server_badge_mountain.png"),
-            ("蓬莱岛", "ui://qdao2026/icon_server_badge_lotus.png"),
-            ("瀛洲海", "ui://qdao2026/icon_server_badge_talisman.png"),
-            ("九霄殿", "ui://qdao2026/icon_server_badge_pavilion.png"),
-            ("太虚观", "ui://qdao2026/icon_server_badge_pagoda.png"),
-            ("玄都阁", "ui://qdao2026/icon_server_badge_sword.png"),
-            ("赤霞岭", "ui://qdao2026/icon_server_badge_whirlpool.png"),
+            ("云海宗", "ui://qdao/icon_server_badge_pavilion.png"),
+            ("清风谷", "ui://qdao/icon_server_badge_pagoda.png"),
+            ("碧落渊", "ui://qdao/icon_server_badge_sword.png"),
+            ("紫霄峰", "ui://qdao/icon_server_badge_whirlpool.png"),
+            ("沧浪洲", "ui://qdao/icon_server_badge_yinyang.png"),
+            ("昆仑墟", "ui://qdao/icon_server_badge_mountain.png"),
+            ("蓬莱岛", "ui://qdao/icon_server_badge_lotus.png"),
+            ("瀛洲海", "ui://qdao/icon_server_badge_talisman.png"),
+            ("九霄殿", "ui://qdao/icon_server_badge_pavilion.png"),
+            ("太虚观", "ui://qdao/icon_server_badge_pagoda.png"),
+            ("玄都阁", "ui://qdao/icon_server_badge_sword.png"),
+            ("赤霞岭", "ui://qdao/icon_server_badge_whirlpool.png"),
         };
 
-        private const string TabItemUrl    = "ui://qdao2026/QdaoTabIdle";
-        private const string ServerCardUrl = "ui://qdao2026/QdaoServerCard";
+        private const string TabItemUrl    = "ui://qdao/QdaoTabIdle";
+        private const string ServerCardUrl = "ui://qdao/QdaoServerCard";
 
         private AppBootstrap _app;
         private GComponent _root;
