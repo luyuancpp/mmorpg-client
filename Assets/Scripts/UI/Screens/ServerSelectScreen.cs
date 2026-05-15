@@ -5,22 +5,32 @@ using UnityEngine;
 namespace MmorpgClient.UI.Screens
 {
     /// <summary>
-    /// Validation harness for the new three-layer qdao layout.
-    /// Walks the FUI ServerSelectScreen component, discovers the two GList
-    /// children (listTabs + listServer), and seeds them with the same
-    /// inline data that lives in the FUI XML so the runtime sees content.
+    /// Server selection screen.
     ///
-    /// FUI inline &lt;item&gt; entries on a list are design-time only — the
-    /// editor preview shows them, but the published .bytes ships an empty
-    /// list at runtime. Code has to repopulate via AddItemFromPool.
+    /// Layout contract with ServerSelectScreen.xml (see invariants comment
+    /// in that file): listServer is a fixed 2x4 pagination grid; selecting
+    /// a card flips its checked controller, then btnConfirm enters.
     ///
-    /// Once the gateway returns real zones we'll replace the hard-coded
-    /// arrays with Session.Zones / a fetch coroutine; for now this just
-    /// proves the layout renders end-to-end.
+    /// Why this code looks the way it does:
+    ///  - All highlight state is driven by FairyGUI controllers (`checked`
+    ///    on QdaoServerCard, default selection on QdaoTabIdle). No
+    ///    hand-rolled "remember last index, paint old white, paint new red"
+    ///    logic — every previous regression we hit on this screen ("tab
+    ///    not clear", "selection sticky", "two cards red at once") was a
+    ///    symptom of duplicating controller state in C#.
+    ///  - Tab clicks don't drive anything else here. listTabs.selectedIndex
+    ///    is the source of truth; we just log it. Filtering by tab is a
+    ///    future step that needs real Session.Zones data anyway.
+    ///  - Card buttons (btnEnter/btnDetail) were removed from
+    ///    QdaoServerCard.xml; entry is now only via the bottom-bar
+    ///    btnConfirm. Don't reintroduce per-card click handlers — the
+    ///    whole card IS the hit area now.
     /// </summary>
     public sealed class ServerSelectScreen : IScreen
     {
-        // Inline tab data — keep in sync with ServerSelectScreen.xml
+        // Inline tab data — keep in sync with ServerSelectScreen.xml.
+        // The FUI <item> entries inside <list> are design-time only; the
+        // published .bytes ships empty lists at runtime, so we repopulate.
         private static readonly (string label, string iconUrl)[] Tabs =
         {
             ("近期", "ui://qdao/icon_alt_left_tab_icon_1.png"),
@@ -31,22 +41,22 @@ namespace MmorpgClient.UI.Screens
             ("海外", "ui://qdao/icon_category_swirl.png"),
         };
 
-        // Inline server data — same names as the FUI item list, since the
-        // gateway-side zone fetch isn't wired here yet.
-        private static readonly (string name, string badgeUrl)[] Servers =
+        // Inline server data — replaced by Session.Zones once the
+        // /api/server-list fetch is wired up here.
+        private static readonly (string name, string badgeUrl, int status, string subtitle)[] Servers =
         {
-            ("云海宗", "ui://qdao/icon_server_badge_pavilion.png"),
-            ("清风谷", "ui://qdao/icon_server_badge_pagoda.png"),
-            ("碧落渊", "ui://qdao/icon_server_badge_sword.png"),
-            ("紫霄峰", "ui://qdao/icon_server_badge_whirlpool.png"),
-            ("沧浪洲", "ui://qdao/icon_server_badge_yinyang.png"),
-            ("昆仑墟", "ui://qdao/icon_server_badge_mountain.png"),
-            ("蓬莱岛", "ui://qdao/icon_server_badge_lotus.png"),
-            ("瀛洲海", "ui://qdao/icon_server_badge_talisman.png"),
-            ("九霄殿", "ui://qdao/icon_server_badge_pavilion.png"),
-            ("太虚观", "ui://qdao/icon_server_badge_pagoda.png"),
-            ("玄都阁", "ui://qdao/icon_server_badge_sword.png"),
-            ("赤霞岭", "ui://qdao/icon_server_badge_whirlpool.png"),
+            ("云海宗", "ui://qdao/icon_server_badge_pavilion.png",  0, "畅通  人气旺"),
+            ("清风谷", "ui://qdao/icon_server_badge_pagoda.png",    0, "畅通  人气旺"),
+            ("碧落渊", "ui://qdao/icon_server_badge_sword.png",     1, "拥挤"),
+            ("紫霄峰", "ui://qdao/icon_server_badge_whirlpool.png", 0, "畅通  人气旺"),
+            ("沧浪洲", "ui://qdao/icon_server_badge_yinyang.png",   0, "畅通  人气旺"),
+            ("昆仑墟", "ui://qdao/icon_server_badge_mountain.png",  1, "拥挤"),
+            ("蓬莱岛", "ui://qdao/icon_server_badge_lotus.png",     0, "畅通  人气旺"),
+            ("瀛洲海", "ui://qdao/icon_server_badge_talisman.png",  2, "维护中"),
+            ("九霄殿", "ui://qdao/icon_server_badge_pavilion.png",  0, "畅通  人气旺"),
+            ("太虚观", "ui://qdao/icon_server_badge_pagoda.png",    0, "畅通  人气旺"),
+            ("玄都阁", "ui://qdao/icon_server_badge_sword.png",     1, "拥挤"),
+            ("赤霞岭", "ui://qdao/icon_server_badge_whirlpool.png", 0, "畅通  人气旺"),
         };
 
         private const string TabItemUrl    = "ui://qdao/QdaoTabIdle";
@@ -56,12 +66,12 @@ namespace MmorpgClient.UI.Screens
         private GComponent _root;
         private GList _listTabs;
         private GList _listServer;
-        private int _activeTab = 1;        // start on "推荐"
-        private int _selectedServer = -1;
+        private GTextField _txtStatus;
 
         public GComponent Build(AppBootstrap app)
         {
             _app = app;
+
             _root = Theme.TryCreateFromPackage("ServerSelectScreen");
             if (_root == null)
             {
@@ -71,14 +81,28 @@ namespace MmorpgClient.UI.Screens
 
             _listTabs   = Theme.Find<GList>(_root, "listTabs");
             _listServer = Theme.Find<GList>(_root, "listServer");
+            _txtStatus  = Theme.Find<GTextField>(_root, "txtStatus");
 
             FillTabs();
             FillServers();
             BindButtons();
+            SetStatus("");
+
             return _root;
         }
 
-        public void OnEnter() { }
+        public void OnEnter()
+        {
+            // Default initial selection — first server. Easier than asking
+            // the user to click before they realise the bottom 进入 button
+            // works.
+            if (_app?.Session != null)
+                _app.Session.SelectedZoneIndex = Mathf.Clamp(_app.Session.SelectedZoneIndex, 0, Mathf.Max(0, Servers.Length - 1));
+            else
+                ApplyServerSelection(0);
+            ApplyServerSelection(_app?.Session?.SelectedZoneIndex ?? 0);
+        }
+
         public void OnExit() { }
         public void Tick(float dt) { }
 
@@ -87,6 +111,7 @@ namespace MmorpgClient.UI.Screens
         private void FillTabs()
         {
             if (_listTabs == null) return;
+
             _listTabs.RemoveChildrenToPool();
             for (int i = 0; i < Tabs.Length; i++)
             {
@@ -96,12 +121,13 @@ namespace MmorpgClient.UI.Screens
                 FillTab(item, i);
             }
             _listTabs.selectionMode = ListSelectionMode.Single;
-            _listTabs.selectedIndex = Mathf.Clamp(_activeTab, 0, Tabs.Length - 1);
-            _listTabs.onClickItem.Add(OnTabClicked);
+            _listTabs.selectedIndex = 1; // start on "推荐"
+            _listTabs.onClickItem.Set(OnTabClicked);
 
-            // Lock the scroll pane so the tab list never drifts on open —
-            // 6×88 + 5×8 = 568 fits in the 440 region with overflow=visible
-            // anyway, but if FairyGUI built a ScrollPane for it, pin it.
+            // Tabs container is exact-fit (180 × 472 for 6×72 + 5×8); even
+            // if FairyGUI built a ScrollPane for it, pin to top so it can't
+            // drift on entry. touchEffect=false keeps stray drags from
+            // scrolling the container 1px off-zero.
             if (_listTabs.scrollPane != null)
             {
                 _listTabs.scrollPane.SetPosX(0f, false);
@@ -122,6 +148,7 @@ namespace MmorpgClient.UI.Screens
         private void FillServers()
         {
             if (_listServer == null) return;
+
             _listServer.RemoveChildrenToPool();
             for (int i = 0; i < Servers.Length; i++)
             {
@@ -131,33 +158,83 @@ namespace MmorpgClient.UI.Screens
                 FillServer(item, i);
             }
             _listServer.selectionMode = ListSelectionMode.Single;
-            _listServer.onClickItem.Add(OnServerClicked);
+            _listServer.onClickItem.Set(OnServerClicked);
+
+            VerifyGridShape();
         }
 
-        private void FillServer(GComponent card, int index)
+        private static void FillServer(GComponent card, int index)
         {
-            var (name, badgeUrl) = Servers[index];
+            var (name, badgeUrl, status, subtitle) = Servers[index];
+
             if (card.GetChild("title") is GTextField title)
                 title.text = name;
-            if (card.GetChild("subtitle") is GTextField subtitle)
-                subtitle.text = "畅通  人气旺";
+            if (card.GetChild("subtitle") is GTextField sub)
+                sub.text = subtitle;
             if (card.GetChild("badge") is GLoader badge)
                 badge.url = badgeUrl;
 
-            // Inline 进入/详情 buttons were removed from QdaoServerCard.
-            // Selection is handled by OnServerClicked (whole-card hit area)
-            // and entry is driven by the bottom-bar btnConfirm.
+            // status: 0 = green, 1 = red, 2 = hidden (maintenance). The
+            // controller in QdaoServerCard.xml drives the dot's display.
+            var statusCtrl = card.GetController("status");
+            if (statusCtrl != null) statusCtrl.selectedIndex = Mathf.Clamp(status, 0, 2);
+
+            // Make sure no card is left in a "checked" state from a prior
+            // pool reuse — selection is reapplied centrally in
+            // ApplyServerSelection().
+            var checkedCtrl = card.GetController("checked");
+            if (checkedCtrl != null) checkedCtrl.selectedIndex = 0;
         }
 
-        // ── Bottom action buttons ───────────────────────────────────
+        /// <summary>
+        /// Sanity-check that the published FUI grid actually renders as 2
+        /// columns. Catches the recurring regression where the .bytes was
+        /// republished with layout="flow_vt" or a wrong container width
+        /// and silently turned into 3-or-4 columns. We don't auto-fix —
+        /// only log so the next person sees the cause in the editor log.
+        /// </summary>
+        private void VerifyGridShape()
+        {
+            if (_listServer == null || _listServer.numChildren < 2) return;
+
+            var first  = _listServer.GetChildAt(0);
+            var second = _listServer.GetChildAt(1);
+            if (first == null || second == null) return;
+
+            // In a 2-column grid the first two cards share the SAME y and
+            // differ in x. In a 1-column flow they share x; in a 3+ column
+            // flow_vt grid (the regression we keep hitting) the first
+            // column fills top-to-bottom, so cards 0 and 1 share x but
+            // differ in y.
+            bool isTwoColumn = Mathf.Approximately(first.y, second.y) && !Mathf.Approximately(first.x, second.x);
+            if (isTwoColumn) return;
+
+            int cols = CountFirstRowColumns();
+            Debug.LogWarning(
+                $"[ServerSelectScreen] listServer is rendering as {cols} column(s), expected 2. " +
+                "Check ServerSelectScreen.xml layout=\"pagination\" + columnGap and republish qdao_fui.bytes.");
+        }
+
+        private int CountFirstRowColumns()
+        {
+            if (_listServer == null || _listServer.numChildren == 0) return 0;
+            float row0Y = _listServer.GetChildAt(0).y;
+            int cols = 0;
+            for (int i = 0; i < _listServer.numChildren; i++)
+            {
+                if (Mathf.Approximately(_listServer.GetChildAt(i).y, row0Y)) cols++;
+                else break;
+            }
+            return cols;
+        }
+
+        // ── Bottom action bar ───────────────────────────────────────
 
         private void BindButtons()
         {
-            BindIfPresent("btnBack",      () => _app.Router.Show<LoginScreen>());
-            BindIfPresent("btnRefresh",   OnRefresh);
-            BindIfPresent("btnConfirm",   OnConfirm);
-            BindIfPresent("btnScrollUp",   () => ScrollList(-150f));
-            BindIfPresent("btnScrollDown", () => ScrollList( 150f));
+            BindIfPresent("btnBack",    () => _app.Router.Show<LoginScreen>());
+            BindIfPresent("btnRefresh", OnRefresh);
+            BindIfPresent("btnConfirm", OnConfirm);
         }
 
         private void BindIfPresent(string childName, Action handler)
@@ -173,50 +250,60 @@ namespace MmorpgClient.UI.Screens
         {
             int idx = _listTabs.GetChildIndex(ctx.data as GObject);
             if (idx < 0 || idx >= Tabs.Length) return;
-            _activeTab = idx;
-            Debug.Log($"[ServerSelectScreen] tab clicked: {Tabs[idx].label}");
+            Debug.Log($"[ServerSelectScreen] tab: {Tabs[idx].label}");
+            // Real tab-filtering goes here once Session.Zones is populated.
         }
 
         private void OnServerClicked(EventContext ctx)
         {
             int idx = _listServer.GetChildIndex(ctx.data as GObject);
             if (idx < 0 || idx >= Servers.Length) return;
-            _selectedServer = idx;
-            Debug.Log($"[ServerSelectScreen] server selected: {Servers[idx].name}");
+            ApplyServerSelection(idx);
         }
 
-        private void OnEnterServer(int index)
+        private void ApplyServerSelection(int index)
         {
-            if (index < 0 || index >= Servers.Length) return;
-            _selectedServer = index;
-            Debug.Log($"[ServerSelectScreen] enter: {Servers[index].name}");
-            _app.Router.Show<RoleCreateScreen>();
+            if (_listServer == null) return;
+            if (index < 0 || index >= _listServer.numChildren) return;
+
+            for (int i = 0; i < _listServer.numChildren; i++)
+            {
+                if (_listServer.GetChildAt(i) is GComponent card)
+                {
+                    var c = card.GetController("checked");
+                    if (c != null) c.selectedIndex = (i == index) ? 1 : 0;
+                }
+            }
+            _listServer.selectedIndex = index;
+            if (_app?.Session != null) _app.Session.SelectedZoneIndex = index;
+            SetStatus($"已选择: {Servers[index].name}");
         }
 
         private void OnRefresh()
         {
             Debug.Log("[ServerSelectScreen] refresh");
             FillServers();
+            ApplyServerSelection(Mathf.Clamp(_app?.Session?.SelectedZoneIndex ?? 0, 0, Servers.Length - 1));
         }
 
         private void OnConfirm()
         {
-            if (_selectedServer < 0)
+            int idx = _app?.Session?.SelectedZoneIndex ?? -1;
+            if (idx < 0 || idx >= Servers.Length)
             {
-                Debug.Log("[ServerSelectScreen] confirm with no selection");
+                SetStatus("请先选择一个服务器");
                 return;
             }
-            OnEnterServer(_selectedServer);
+            Debug.Log($"[ServerSelectScreen] enter: {Servers[idx].name}");
+            _app.Router.Show<RoleCreateScreen>();
         }
 
-        private void ScrollList(float deltaY)
+        private void SetStatus(string text)
         {
-            if (_listServer?.scrollPane == null) return;
-            float maxY = Mathf.Max(0f, _listServer.scrollPane.contentHeight - _listServer.scrollPane.viewHeight);
-            _listServer.scrollPane.posY = Mathf.Clamp(_listServer.scrollPane.posY + deltaY, 0f, maxY);
+            if (_txtStatus != null) _txtStatus.text = text ?? string.Empty;
         }
 
-        // ── Fallback ────────────────────────────────────────────────
+        // ── Fallback (FUI package missing) ──────────────────────────
 
         private static GComponent BuildBlank()
         {
