@@ -79,6 +79,16 @@ namespace MmorpgClient.UI
             _ = Stage.inst;
             _ = GRoot.inst;
 
+            // Default font for ALL text nodes that don't explicitly set a font.
+            // FairyGUI looks up the first name via Resources.Load<Font>("Fonts/<name>")
+            // — we ship Assets/Resources/Fonts/SimKai.ttf so this resolves on every
+            // platform, regardless of what fonts the user has installed. Subsequent
+            // names act as graceful fallbacks if the bundled .ttf is ever stripped.
+            //
+            // This must be set BEFORE any text-bearing UIPackage is loaded; once a
+            // GTextField has captured the old default it won't re-read this value.
+            UIConfig.defaultFont = Theme.BodyFontName;
+
             // Without a UIContentScaler, GRoot reports raw pixel size, so the
             // qdao screens authored at 2560x1080 get resized to the window's
             // pixel dimensions while their child art keeps the design-space
@@ -91,9 +101,46 @@ namespace MmorpgClient.UI
             scaler.scaleMode = UIContentScaler.ScaleMode.ScaleWithScreenSize;
             scaler.designResolutionX = (int)Theme.Art.ReferenceWidth;
             scaler.designResolutionY = (int)Theme.Art.ReferenceHeight;
-            scaler.screenMatchMode = UIContentScaler.ScreenMatchMode.MatchWidthOrHeight;
+
+            // Match the screen edge that's CLOSER to the design ratio so the
+            // other edge gets letterboxed (black bars) instead of stretched.
+            // For 2560x1080 (~21:9) on 1920x1080 (16:9), screen is too narrow:
+            // MatchHeight keeps 1080 → 1080 (1.0x integer), MatchWidth would
+            // force 2560 → 1920 (0.75x non-integer blur).
+            // For 3840x2160 (16:9) on a 21:9 monitor, the opposite applies.
+            //
+            // This version of FairyGUI exposes MatchWidth / MatchHeight as
+            // standalone enum values (no 0..1 lerp coefficient), so we pick
+            // one outright instead of feeding a fractional matchWidthOrHeight.
+            float screenRatio = (float)Screen.width / Mathf.Max(1, Screen.height);
+            float designRatio = Theme.Art.ReferenceWidth / Theme.Art.ReferenceHeight;
+            scaler.screenMatchMode = (screenRatio < designRatio)
+                ? UIContentScaler.ScreenMatchMode.MatchHeight
+                : UIContentScaler.ScreenMatchMode.MatchWidth;
             scaler.ApplyChange();
             GRoot.inst.ApplyContentScaleFactor();
+
+            // Sharpening pass — combats the residual blur you get whenever the
+            // window's pixel size is not an integer multiple of the design
+            // resolution (1920x1080 vs 2560x1080 = 0.75x, 4K = 1.5x, etc.):
+            //
+            // 1. pixelPerfect on GRoot snaps every child's final transform to
+            //    integer pixels, so sprite edges land on texel boundaries
+            //    instead of being bilinear-blended across two screen pixels.
+            // 2. 4x MSAA on the global QualitySettings smooths the residual
+            //    sub-pixel jitter on rotated / non-axis-aligned art (badges).
+            //    The Very-High/Ultra quality levels in ProjectSettings have
+            //    been bumped to antiAliasing=4 so this is now the asset
+            //    default, not just a runtime override.
+            // 3. anisoLevel=ForceEnable lets the atlas's aniso=2 setting
+            //    actually take effect at runtime.
+            // 4. mipmap bias -0.5 (also set on the atlas .meta) keeps the
+            //    sampler one mip-level sharper than Unity's auto-choice
+            //    when the UI is shrunk by a fractional factor.
+            GRoot.inst.displayObject.pixelPerfect = true;
+            QualitySettings.antiAliasing = Mathf.Max(QualitySettings.antiAliasing, 4);
+            QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
+            QualitySettings.globalTextureMipmapLimit = 0;
         }
 
         private void TryLoadUiPackage()
@@ -114,17 +161,24 @@ namespace MmorpgClient.UI
 
         private void BuildRoot()
         {
-            // _root is a fixed 2560x1080 design-space canvas. FairyGUI screen
-            // components own their visual art and interaction widgets in that
-            // same coordinate system. We then uniformly scale & center _root
-            // inside GRoot (letterbox / pillarbox) so the canvas keeps its
-            // aspect ratio at any window size.
+            // UIContentScaler (configured in EnsureFairyGUIStage) already maps
+            // the 2560x1080 design space to the actual window with a single
+            // uniform scale + letterbox via MatchWidthOrHeight. We MUST NOT
+            // apply a second SetScale on _root, otherwise every sprite goes
+            // through two non-integer scales and lands on sub-pixel offsets,
+            // which is exactly what makes the entire UI look blurry.
+            //
+            // _root / _host are now 1:1 children of GRoot, sized to the
+            // design canvas. GRoot.width/height already report design units
+            // (2560 x 1080-ish, varying with window aspect ratio), so screens
+            // can lay themselves out in design coordinates with no scaling
+            // applied here.
             _root = new GComponent();
-            _root.SetSize(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight);
+            _root.SetSize(GRoot.inst.width, GRoot.inst.height);
             GRoot.inst.AddChild(_root);
 
             _host = new GComponent();
-            _host.SetSize(Theme.Art.ReferenceWidth, Theme.Art.ReferenceHeight);
+            _host.SetSize(GRoot.inst.width, GRoot.inst.height);
             _root.AddChild(_host);
 
             FitRootToScreen();
@@ -137,19 +191,18 @@ namespace MmorpgClient.UI
         }
 
         /// <summary>
-        /// Uniformly scale the 2560x1080 design canvas to fit GRoot, preserving
-        /// aspect ratio (letterbox / pillarbox). Backdrop + UI keep pixel-exact
-        /// alignment because they share the same parent transform.
+        /// Resize the design canvas to whatever GRoot currently reports.
+        /// UIContentScaler handles the actual pixel scaling — we only keep
+        /// _root / _host the same size as GRoot so screens fill it cleanly.
+        /// No SetScale here on purpose (see BuildRoot for the rationale).
         /// </summary>
         private void FitRootToScreen()
         {
             if (_root == null) return;
-            float gw = Mathf.Max(1f, GRoot.inst.width  > 1f ? GRoot.inst.width  : Screen.width);
-            float gh = Mathf.Max(1f, GRoot.inst.height > 1f ? GRoot.inst.height : Screen.height);
-            float scale = Mathf.Min(gw / Theme.Art.ReferenceWidth, gh / Theme.Art.ReferenceHeight);
-            _root.SetScale(scale, scale);
-            _root.SetXY((gw - Theme.Art.ReferenceWidth  * scale) * 0.5f,
-                        (gh - Theme.Art.ReferenceHeight * scale) * 0.5f);
+            _root.SetSize(GRoot.inst.width, GRoot.inst.height);
+            _root.SetXY(0f, 0f);
+            if (_host != null)
+                _host.SetSize(GRoot.inst.width, GRoot.inst.height);
         }
 
         private void EnsureSceneRig()

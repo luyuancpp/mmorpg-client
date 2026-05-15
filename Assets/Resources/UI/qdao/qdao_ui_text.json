@@ -14,7 +14,7 @@
     { "key": "login.announcementError", "value": "公告暂未开放" },
     { "key": "login.noAnnouncements", "value": "暂无公告" },
 
-    { "key": "server.title", "value": "选择区服" },
+    { "key": "server.title", "value": "" },
     { "key": "server.confirm", "value": "选择角色" },
     { "key": "server.refresh", "value": "刷新区服" },
     { "key": "server.back", "value": "返回登录" },
