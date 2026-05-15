@@ -144,12 +144,9 @@ namespace MmorpgClient.UI.Screens
             if (card.GetChild("badge") is GLoader badge)
                 badge.url = badgeUrl;
 
-            // Inline buttons inside each card. Capture index by value.
-            int idx = index;
-            if (card.GetChild("btnEnter") is GButton btnEnter)
-                btnEnter.onClick.Set(_ => OnEnterServer(idx));
-            if (card.GetChild("btnDetail") is GButton btnDetail)
-                btnDetail.onClick.Set(_ => OnShowDetail(idx));
+            // Inline 进入/详情 buttons were removed from QdaoServerCard.
+            // Selection is handled by OnServerClicked (whole-card hit area)
+            // and entry is driven by the bottom-bar btnConfirm.
         }
 
         // ── Bottom action buttons ───────────────────────────────────
@@ -194,13 +191,6 @@ namespace MmorpgClient.UI.Screens
             _selectedServer = index;
             Debug.Log($"[ServerSelectScreen] enter: {Servers[index].name}");
             _app.Router.Show<RoleCreateScreen>();
-        }
-
-        private void OnShowDetail(int index)
-        {
-            if (index < 0 || index >= Servers.Length) return;
-            Debug.Log($"[ServerSelectScreen] detail: {Servers[index].name}");
-            // Future: pop a tooltip / detail panel
         }
 
         private void OnRefresh()
