@@ -54,11 +54,10 @@ namespace MmorpgClient.UI
             Router = new ScreenRouter(this, _host);
             GRoot.inst.onSizeChanged.Add(OnRootResize);
 
-            // Boot into ServerSelectScreen to validate the new three-layer
-            // qdao layout (scene_bg + ui_overlay + controls). Switch to
-            // Router.Show<LoginScreen>() once the login flow is rewired,
-            // or Router.Show<SceneScreen>() for the older roster screen.
-            Router.Show<ServerSelectScreen>();
+            // Boot directly into the V3 login flow. The router stack is
+            // LoginV3Screen → ServersV3Screen → SceneV3Screen — see those
+            // classes for the layout contracts with the FairyGUI components.
+            Router.Show<LoginV3Screen>();
         }
 
         private void Update()

@@ -24,6 +24,12 @@ namespace MmorpgClient.UI
         public int    RoleArchetypeIndex = 0;
         public string RoleNickname = "云行客";
 
+        // V3 character pack selection. -1 = none chosen yet (RoleCreateScreen
+        // falls back to RoleArchetypeIndex). SelectedWeaponV3Index defaults to
+        // the character's starter weapon when not overridden.
+        public int    SelectedCharacterV3Index = -1;
+        public int    SelectedWeaponV3Index    = -1;
+
         public uint  StartSceneConfigId = 1;
         public ulong StartSceneId       = 0;
     }
