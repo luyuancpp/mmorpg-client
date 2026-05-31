@@ -68,6 +68,9 @@ namespace MmorpgClient.UI.Screens
             FillTabs();
             FillServers();
 
+            BindIfPresent("tabRecent",    () => OnTopTabClicked(0));
+            BindIfPresent("tabRecommend", () => OnTopTabClicked(1));
+            BindIfPresent("tabAll",       () => OnTopTabClicked(2));
             BindIfPresent("btnBack",    () => _app.Router.Show<LoginV3Screen>());
             BindIfPresent("btnRefresh", OnRefresh);
             BindIfPresent("btnEnter",   OnEnterClicked);
@@ -90,12 +93,16 @@ namespace MmorpgClient.UI.Screens
         {
             if (_listTabs == null) return;
             _listTabs.RemoveChildrenToPool();
-            foreach (var label in TabLabels)
+            for (int i = 0; i < TabLabels.Length; i++)
             {
                 var item = UIPackage.CreateObjectFromURL(TabUrl) as GComponent;
                 if (item == null) continue;
                 _listTabs.AddChild(item);
-                if (item.GetChild("title") is GTextField t) t.text = label;
+                if (item.GetChild("title") is GTextField t) t.text = TabLabels[i];
+
+                var styleCtrl = item.GetController("style");
+                if (styleCtrl != null && styleCtrl.pageCount > 0)
+                    styleCtrl.selectedIndex = Mathf.Clamp(i, 0, styleCtrl.pageCount - 1);
             }
             _listTabs.selectionMode = ListSelectionMode.Single;
             _listTabs.selectedIndex = 1; // start on "推荐"
@@ -132,6 +139,10 @@ namespace MmorpgClient.UI.Screens
             var statusCtrl = card.GetController("status");
             if (statusCtrl != null) statusCtrl.selectedIndex = Mathf.Clamp(status, 0, 2);
 
+            var badgeCtrl = card.GetController("badge");
+            if (badgeCtrl != null && badgeCtrl.pageCount > 0)
+                badgeCtrl.selectedIndex = index % badgeCtrl.pageCount;
+
             // Always reset checked when re-populating — pooled cards may
             // come back already selected from a previous fill.
             var checkedCtrl = card.GetController("checked");
@@ -146,6 +157,14 @@ namespace MmorpgClient.UI.Screens
             if (idx < 0 || idx >= TabLabels.Length) return;
             Debug.Log($"[ServersV3] tab: {TabLabels[idx]}");
             // Real filter wires up here once Session.Zones is fed by the API.
+        }
+
+        private void OnTopTabClicked(int index)
+        {
+            if (_listTabs != null)
+                _listTabs.selectedIndex = Mathf.Clamp(index, 0, _listTabs.numChildren - 1);
+            Debug.Log($"[ServersV3] top tab: {index}");
+            SetStatus(index == 0 ? "最近登录" : index == 1 ? "推荐服务器" : "全部区服");
         }
 
         private void OnServerClicked(EventContext ctx)
