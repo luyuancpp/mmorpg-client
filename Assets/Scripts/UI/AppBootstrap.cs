@@ -101,21 +101,12 @@ namespace MmorpgClient.UI
             scaler.designResolutionX = (int)Theme.Art.ReferenceWidth;
             scaler.designResolutionY = (int)Theme.Art.ReferenceHeight;
 
-            // Match the screen edge that's CLOSER to the design ratio so the
-            // other edge gets letterboxed (black bars) instead of stretched.
-            // For 2560x1080 (~21:9) on 1920x1080 (16:9), screen is too narrow:
-            // MatchHeight keeps 1080 → 1080 (1.0x integer), MatchWidth would
-            // force 2560 → 1920 (0.75x non-integer blur).
-            // For 3840x2160 (16:9) on a 21:9 monitor, the opposite applies.
-            //
-            // This version of FairyGUI exposes MatchWidth / MatchHeight as
-            // standalone enum values (no 0..1 lerp coefficient), so we pick
-            // one outright instead of feeding a fractional matchWidthOrHeight.
-            float screenRatio = (float)Screen.width / Mathf.Max(1, Screen.height);
-            float designRatio = Theme.Art.ReferenceWidth / Theme.Art.ReferenceHeight;
-            scaler.screenMatchMode = (screenRatio < designRatio)
-                ? UIContentScaler.ScreenMatchMode.MatchHeight
-                : UIContentScaler.ScreenMatchMode.MatchWidth;
+            // The qdao art is authored as one fixed 2560x1080 widescreen
+            // composition. Always matching width preserves the whole frame in
+            // narrower Unity Game views instead of cropping the right side.
+            // Extra vertical space is acceptable letterbox room; losing the
+            // character and right panel is not.
+            scaler.screenMatchMode = UIContentScaler.ScreenMatchMode.MatchWidth;
             scaler.ApplyChange();
             GRoot.inst.ApplyContentScaleFactor();
 
